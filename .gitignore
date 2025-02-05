@@ -1,0 +1,6 @@
+.deppack
+node_modules
+dist
+.deppackignore
+deppack.config.json
+repomix-output.txt

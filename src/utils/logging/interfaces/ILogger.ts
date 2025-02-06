@@ -1,3 +1,7 @@
+// src/utils/logging/interfaces/ILogger.ts
+
+import { IService } from '@/types/services';
+
 export interface ILogColors {
   reset: string;
   bright: string;
@@ -9,30 +13,49 @@ export interface ILogColors {
   gray: string;
 }
 
-export interface ILogger {
-  info(message: string): void;
-  success(message: string): void;
-  warn(message: string): void;
-  error(message: string): void;
-  debug(message: string): void;
-  section(title: string): void;
-  summary(title: string, stats: Record<string, any>): void;
-  enableDebug(): void;
-  isDebugEnabled(): boolean;
-}
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-export interface ILoggerConfig {
+export interface ILoggerOptions {
+  /** Enable debug mode */
   enableDebug?: boolean;
+  /** Custom colors */
   colors?: Partial<ILogColors>;
+  /** Include timestamps */
   timestamp?: boolean;
+  /** Minimum log level */
   logLevel?: LogLevel;
 }
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export interface ILoggerDeps {
+  outputStream: NodeJS.WriteStream;
+  errorStream: NodeJS.WriteStream;
+}
 
-export interface ILogMessage {
-  level: LogLevel;
-  message: string;
-  timestamp: string;
-  metadata?: Record<string, unknown>;
+export interface ILogger extends IService {
+  /** Log informational message */
+  info(message: string): void;
+  
+  /** Log success message */
+  success(message: string): void;
+  
+  /** Log warning message */
+  warn(message: string): void;
+  
+  /** Log error message */
+  error(message: string): void;
+  
+  /** Log debug message */
+  debug(message: string): void;
+  
+  /** Log section header */
+  section(title: string): void;
+  
+  /** Log summary with stats */
+  summary(title: string, stats: Record<string, any>): void;
+  
+  /** Enable debug logging */
+  enableDebug(): void;
+  
+  /** Check if debug is enabled */
+  isDebugEnabled(): boolean;
 }

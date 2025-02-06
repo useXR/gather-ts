@@ -1,7 +1,7 @@
-import { ICompileOptions, ICompileResult } from './compiler';
-import { IDeppackConfig, IConfigValidationResult } from './config';
-import { IFileWithContent } from './files';
-import { ISummaryStats } from './stats';
+import { ICompileOptions, ICompileResult } from "./compiler";
+import { IDeppackConfig, IConfigValidationResult } from "./config";
+import { IFileWithContent } from "./files";
+import { ISummaryStats } from "./stats";
 
 export interface IService {
   initialize(): Promise<void>;
@@ -28,7 +28,10 @@ export interface IConfigurationService extends IService {
 }
 
 export interface IDependencyService extends IService {
-  analyzeDependencies(entryFile: string, projectRoot: string): Promise<string[]>;
+  analyzeDependencies(
+    entryFile: string,
+    projectRoot: string
+  ): Promise<string[]>;
   validateEntryPoints(entryFiles: string[]): Promise<boolean>;
   getDependencyGraph(): Promise<Map<string, string[]>>;
 }

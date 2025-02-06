@@ -1,104 +1,189 @@
-import { logger } from '@/utils/logging';
-import { fileSystem } from '@/utils/filesystem/FileSystem';
-import { IErrorHandler, IErrorHandlerOptions, IErrorDetails } from '../interfaces/IError';
+// src/errors/handlers/ErrorHandler.ts
+
 import { DeppackError } from '../exceptions';
-import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
+import { IErrorHandler, IErrorProcessingStrategy, IErrorHandlerDeps, IErrorHandlerOptions, IErrorOperationOptions } from '../interfaces/IErrorHandler';
+
 
 export class ErrorHandler implements IErrorHandler {
-  private readonly options: IErrorHandlerOptions;
-  private readonly fs: IFileSystem;
+  private readonly processingStrategies: IErrorProcessingStrategy[] = [];
+  private readonly debug: boolean;
+  private readonly logToConsole: boolean;
+  private readonly logToFile: boolean;
+  private readonly logFilePath?: string;
+  private readonly rethrow: boolean;
+  private isInitialized: boolean = false;
 
-  constructor(options: IErrorHandlerOptions = {}, fs: IFileSystem = fileSystem) {
-    this.options = {
-      logToConsole: true,
-      logToFile: false,
-      rethrow: false,
-      ...options
-    };
-    this.fs = fs;
+  constructor(
+    private readonly deps: IErrorHandlerDeps,
+    options: IErrorHandlerOptions = {}
+  ) {
+    this.debug = options.debug || false;
+    this.logToConsole = options.logToConsole ?? true;
+    this.logToFile = options.logToFile || false;
+    this.logFilePath = options.logFilePath;
+    this.rethrow = options.rethrow || false;
+
+    if (this.logToConsole) {
+      this.registerStrategy(this.createConsoleStrategy());
+    }
   }
 
-  public handle(error: Error): void {
-    if (this.options.logToConsole) {
-      this.logError(error);
-    }
+  public async initialize(): Promise<void> {
+    this.logDebug('Initializing ErrorHandler');
 
-    if (this.options.logToFile && this.options.logFilePath) {
-      this.logErrorToFile(error);
-    }
+    try {
+      if (this.isInitialized) {
+        this.logDebug('ErrorHandler already initialized');
+        return;
+      }
 
-    if (this.options.rethrow) {
+      if (this.logToFile && this.logFilePath) {
+        this.logDebug(`Setting up file logging at ${this.logFilePath}`);
+        const logDir = this.deps.fileSystem.getDirName(this.logFilePath);
+        
+        if (!this.deps.fileSystem.exists(logDir)) {
+          await this.deps.fileSystem.createDirectory(logDir, true);
+        }
+
+        this.registerStrategy(this.createFileStrategy());
+      }
+
+      this.isInitialized = true;
+      this.logDebug('ErrorHandler initialization complete');
+    } catch (error) {
+      this.deps.logger.error(
+        `Failed to initialize ErrorHandler: ${error instanceof Error ? error.message : String(error)}`
+      );
       throw error;
     }
   }
 
-  public logError(error: Error): void {
-    if (error instanceof DeppackError) {
-      logger.error(`${error.name}: ${error.message}`);
-      if (error.details && Object.keys(error.details).length > 0) {
-        logger.debug(`Details: ${this.formatErrorDetails(error.details)}`);
-      }
-      if (error.stack) {
-        logger.debug('Stack trace:');
-        logger.debug(error.stack);
-      }
-    } else {
-      logger.error(`Unexpected error: ${error.message}`);
-      if (error.stack) {
-        logger.debug(error.stack);
-      }
+  public cleanup(): void {
+    this.logDebug('Cleaning up ErrorHandler');
+    this.processingStrategies.length = 0;
+    this.isInitialized = false;
+  }
+
+  private logDebug(message: string): void {
+    if (this.debug) {
+      this.deps.logger.debug(message);
     }
   }
 
-  private logErrorToFile(error: Error): void {
-    if (!this.options.logFilePath) {
+  public registerStrategy(strategy: IErrorProcessingStrategy): void {
+    this.logDebug('Registering new error processing strategy');
+    this.processingStrategies.push(strategy);
+  }
+
+  public handle(error: Error, options: IErrorOperationOptions = {}): void {
+    this.logDebug(`Handling error: ${error.message}`);
+
+    const normalizedError = this.deps.errorUtils.normalizeError(error);
+    const context = this.deps.errorUtils.extractErrorContext(normalizedError);
+
+    let processedByStrategy = false;
+    for (const strategy of this.processingStrategies) {
+      if (strategy.shouldHandle(normalizedError)) {
+        processedByStrategy = true;
+        this.logDebug('Processing error through strategy');
+        strategy.handle(normalizedError, context);
+      }
+    }
+
+    if (!processedByStrategy) {
+      this.logDebug('No strategy handled the error, using default console logging');
+      this.deps.logger.error(normalizedError.message);
+    }
+
+    if (options.rethrow || this.rethrow) {
+      this.logDebug('Rethrowing error as configured');
+      throw normalizedError;
+    }
+  }
+
+  public handleBatch(errors: Error[]): void {
+    this.logDebug(`Processing batch of ${errors.length} errors`);
+
+    if (errors.length === 0) {
       return;
     }
 
+    const aggregatedError = this.deps.errorUtils.aggregateErrors(errors);
+    this.handle(aggregatedError);
+  }
+
+  public async createErrorBoundary(fn: () => Promise<void>): Promise<void> {
     try {
-      const timestamp = new Date().toISOString();
-      const errorLog = this.formatErrorForFile(error, timestamp);
-      
-      // Ensure the directory exists
-      const dir = this.fs.getDirName(this.options.logFilePath);
-      if (!this.fs.exists(dir)) {
-        this.fs.createDirectory(dir, true);
+      await fn();
+    } catch (error) {
+      this.logDebug('Error caught in error boundary');
+      this.handle(error instanceof Error ? error : new Error(String(error)));
+      return Promise.reject(error);
+    }
+  }
+
+  private createConsoleStrategy(): IErrorProcessingStrategy {
+    return {
+      shouldHandle: () => true,
+      handle: (error: Error, context: Record<string, unknown>) => {
+        const classification = this.deps.errorUtils.classifyError(error);
+
+        switch (classification.severity) {
+          case 'error':
+            this.deps.logger.error(classification.message);
+            if (classification.details) {
+              if (this.debug) {
+        this.deps.logger.debug(`Error details: ${JSON.stringify(classification.details)}`);
       }
-
-      // Append the error to the log file
-      this.fs.writeFileSync(
-        this.options.logFilePath,
-        errorLog + '\n',
-        { flag: 'a' }
-      );
-    } catch (logError) {
-      logger.error(`Failed to write error to log file: ${logError instanceof Error ? logError.message : String(logError)}`);
-    }
-  }
-
-  private formatErrorForFile(error: Error, timestamp: string): string {
-    const parts = [`[${timestamp}] ${error.name}: ${error.message}`];
-
-    if (error instanceof DeppackError && error.details) {
-      parts.push(`Details: ${this.formatErrorDetails(error.details)}`);
-    }
-
-    if (error.stack) {
-      parts.push('Stack trace:', error.stack);
-    }
-
-    return parts.join('\n');
-  }
-
-  public formatErrorDetails(details: IErrorDetails): string {
-    return Object.entries(details)
-      .filter(([_, value]) => value !== undefined)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: [${value.join(', ')}]`;
+            }
+            break;
+          case 'warning':
+            this.deps.logger.warn(classification.message);
+            break;
+          case 'info':
+            this.deps.logger.info(classification.message);
+            break;
         }
-        return `${key}: ${value}`;
-      })
-      .join(', ');
+
+        if (this.debug && classification.stackTrace) {
+          this.logDebug('Stack trace:' + classification.stackTrace);
+        }
+      }
+    };
+  }
+
+  private createFileStrategy(): IErrorProcessingStrategy {
+    if (!this.logFilePath) {
+      throw new Error('Log file path not configured');
+    }
+
+    return {
+      shouldHandle: (error: Error) => error instanceof DeppackError,
+      handle: (error: Error, context: Record<string, unknown>) => {
+        const timestamp = new Date().toISOString();
+        const classification = this.deps.errorUtils.classifyError(error);
+        
+        const logEntry = {
+          timestamp,
+          level: classification.severity,
+          type: classification.type,
+          message: classification.message,
+          details: classification.details,
+          context
+        };
+
+        try {
+          this.deps.fileSystem.writeFileSync(
+            this.logFilePath!,
+            JSON.stringify(logEntry) + '\n',
+            { flag: 'a' }
+          );
+        } catch (writeError) {
+          this.deps.logger.error(
+            `Failed to write to error log: ${writeError instanceof Error ? writeError.message : String(writeError)}`
+          );
+        }
+      }
+    };
   }
 }

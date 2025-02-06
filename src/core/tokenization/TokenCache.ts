@@ -1,61 +1,97 @@
-import crypto from "crypto";
-import { FileSystemError, ValidationError, ConfigurationError } from "@/errors";
-import { logger } from "@/utils/logging";
-import { ITokenCache, ICacheEntry, ICacheStats } from "./interfaces/ITokenCounter";
-import { IFileSystem } from "@/utils/filesystem/interfaces/IFileSystem";
-import { fileSystem as defaultFileSystem } from "@/utils/filesystem/FileSystem";
+// src/core/tokenization/TokenCache.ts
 
-export class TokenCacheManager implements ITokenCache {
+import crypto from "crypto";
+import { FileSystemError, ValidationError, CacheError } from '@/errors';
+import { 
+  ITokenCache, 
+  ICacheEntry, 
+  ICacheStats,
+  ITokenCacheDeps,
+  ITokenCacheOptions 
+} from './interfaces/ITokenCache';
+
+export type CacheOperation = 'read' | 'write' | 'delete' | 'clear' | 'expire';
+
+export class TokenCache implements ITokenCache {
   private readonly cachePath: string;
   private readonly projectRoot: string;
   private cache: Record<string, ICacheEntry> = {};
-  private readonly maxCacheAge: number = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-  private readonly fileSystem: IFileSystem;
+  private readonly maxCacheAge: number;
+  private readonly debug: boolean;
+  private stats: ICacheStats = {
+    totalEntries: 0,
+    oldestEntry: null,
+    newestEntry: null,
+    totalSize: 0,
+    hitCount: 0,
+    missCount: 0,
+    invalidations: 0
+  };
 
-  constructor(projectRoot: string, fileSystem: IFileSystem = defaultFileSystem) {
-    this.fileSystem = fileSystem;
+  constructor(
+    projectRoot: string,
+    private readonly deps: ITokenCacheDeps,
+    options: ITokenCacheOptions = {}
+  ) {
     this.projectRoot = projectRoot;
+    this.maxCacheAge = options.maxCacheAge || 7 * 24 * 60 * 60 * 1000; // 7 days default
+    this.debug = options.debug || false;
+    this.cachePath = this.deps.fileSystem.joinPath(projectRoot, ".deppack", "token-cache.json");
+  }
 
-    if (!projectRoot || typeof projectRoot !== "string") {
-      throw new ValidationError("Invalid project root provided", {
-        projectRoot,
-      });
-    }
-
+  public async initialize(): Promise<void> {
+    this.logDebug('Initializing TokenCache');
+    
     try {
-      if (!this.fileSystem.exists(projectRoot)) {
-        throw new ValidationError("Project root does not exist", {
-          projectRoot,
-        });
+      if (!this.deps.fileSystem.exists(this.projectRoot)) {
+        throw new ValidationError("Project root does not exist", { projectRoot: this.projectRoot });
       }
 
-      const cacheDir = this.fileSystem.joinPath(projectRoot, ".deppack");
-      const cachePath = this.fileSystem.joinPath(cacheDir, "token-cache.json");
-      
-      if (!this.fileSystem.exists(cacheDir)) {
-        try {
-          this.fileSystem.createDirectory(cacheDir, true);
-          logger.debug(`Created cache directory at ${cacheDir}`);
-        } catch (error) {
-          throw new FileSystemError(
-            `Failed to create cache directory: ${error instanceof Error ? error.message : String(error)}`,
-            cacheDir,
-            "create"
-          );
-        }
-      }
-
-      this.cachePath = cachePath;
-      this.loadCache();
+      await this.initializeCachePath();
+      await this.loadCache();
     } catch (error) {
-      if (error instanceof ValidationError || error instanceof FileSystemError) {
-        throw error;
-      }
-      throw new ConfigurationError(
-        `Failed to initialize token cache: ${error instanceof Error ? error.message : String(error)}`,
-        this.projectRoot
+      throw new CacheError(
+        `Failed to initialize TokenCache: ${error instanceof Error ? error.message : String(error)}`,
+        'write'
       );
     }
+  }
+
+  private async initializeCachePath(): Promise<void> {
+    try {
+      const cacheDir = this.deps.fileSystem.getDirName(this.cachePath);
+      if (!this.deps.fileSystem.exists(cacheDir)) {
+        await this.deps.fileSystem.createDirectory(cacheDir, true);
+        this.logDebug(`Created cache directory at ${cacheDir}`);
+      }
+    } catch (error) {
+      throw new CacheError(
+        `Failed to initialize cache path: ${error instanceof Error ? error.message : String(error)}`,
+        'initialize'
+      );
+    }
+  }
+
+  public cleanup(): void {
+    this.logDebug('Cleaning up TokenCache');
+    this.saveCache();
+  }
+
+  private logDebug(message: string): void {
+    if (this.debug) {
+      this.deps.logger.debug(message);
+    }
+  }
+
+  private handleError(operation: string, error: unknown, key?: string): never {
+    const message = error instanceof Error ? error.message : String(error);
+    const cacheError = new CacheError(
+      `Cache ${operation} failed: ${message}`, 
+      operation as 'read' | 'write' | 'delete' | 'clear',
+      key
+    );
+    this.deps.logger.error(cacheError.message);
+    throw cacheError;
   }
 
   private validateCacheEntry(entry: unknown): entry is ICacheEntry {
@@ -73,13 +109,13 @@ export class TokenCacheManager implements ITokenCache {
   }
 
   private getRelativeCachePath(absolutePath: string): string {
-    return this.fileSystem.getRelativePath(this.projectRoot, absolutePath);
+    return this.deps.fileSystem.getRelativePath(this.projectRoot, absolutePath);
   }
 
-  private loadCache(): void {
+  private async loadCache(): Promise<void> {
     try {
-      if (this.fileSystem.exists(this.cachePath)) {
-        const content = this.fileSystem.readFileSync(this.cachePath, 'utf8');
+      if (this.deps.fileSystem.exists(this.cachePath)) {
+        const content = await this.deps.fileSystem.readFile(this.cachePath);
         const parsed = JSON.parse(content);
 
         if (typeof parsed !== "object" || parsed === null) {
@@ -92,63 +128,44 @@ export class TokenCacheManager implements ITokenCache {
         let invalidCount = 0;
 
         Object.entries(parsed).forEach(([key, entry]) => {
-          try {
-            if (!this.validateCacheEntry(entry)) {
-              invalidCount++;
-              logger.debug(`Invalid cache entry for ${key}, skipping`);
-              return;
-            }
-
-            const entryAge = now - Date.parse(entry.lastUpdated);
-            if (entryAge > this.maxCacheAge) {
-              expiredCount++;
-              logger.debug(`Skipping expired cache entry for ${key}`);
-              return;
-            }
-
-            validatedCache[key] = entry;
-          } catch (error) {
-            logger.warn(
-              `Error processing cache entry for ${key}: ${error instanceof Error ? error.message : String(error)}`
-            );
+          if (!this.validateCacheEntry(entry)) {
+            invalidCount++;
+            this.logDebug(`Invalid cache entry for ${key}, skipping`);
+            return;
           }
+
+          const entryAge = now - Date.parse(entry.lastUpdated);
+          if (entryAge > this.maxCacheAge) {
+            expiredCount++;
+            this.stats.invalidations++;
+            this.logDebug(`Skipping expired cache entry for ${key}`);
+            return;
+          }
+
+          validatedCache[key] = entry;
         });
 
         this.cache = validatedCache;
-        logger.debug(
+        this.updateStats();
+        this.logDebug(
           `Loaded ${Object.keys(this.cache).length} valid cache entries ` +
           `(${expiredCount} expired, ${invalidCount} invalid)`
         );
       }
     } catch (error) {
-      throw new FileSystemError(
-        `Failed to load cache from ${this.cachePath}: ${error instanceof Error ? error.message : String(error)}`,
-        this.cachePath,
-        "read"
-      );
+      this.handleError('read', error);
     }
   }
 
-  private saveCache(): void {
+  private async saveCache(): Promise<void> {
     try {
-      const cacheDir = this.fileSystem.getDirName(this.cachePath);
-
-      if (!this.fileSystem.exists(cacheDir)) {
-        this.fileSystem.createDirectory(cacheDir, true);
-      }
-
-      this.fileSystem.writeFileSync(
+      await this.deps.fileSystem.writeFile(
         this.cachePath,
-        JSON.stringify(this.cache, null, 2),
-        { encoding: 'utf8' }
+        JSON.stringify(this.cache, null, 2)
       );
-      logger.debug(`Saved ${Object.keys(this.cache).length} cache entries to ${this.cachePath}`);
+      this.logDebug(`Saved ${Object.keys(this.cache).length} cache entries`);
     } catch (error) {
-      throw new FileSystemError(
-        `Failed to save cache to ${this.cachePath}: ${error instanceof Error ? error.message : String(error)}`,
-        this.cachePath,
-        "write"
-      );
+      this.handleError('write', error);
     }
   }
 
@@ -156,9 +173,7 @@ export class TokenCacheManager implements ITokenCache {
     try {
       return crypto.createHash("md5").update(content).digest("hex");
     } catch (error) {
-      throw new ValidationError(
-        `Failed to compute content hash: ${error instanceof Error ? error.message : String(error)}`
-      );
+      this.handleError('hash', error);
     }
   }
 
@@ -167,12 +182,7 @@ export class TokenCacheManager implements ITokenCache {
       throw new ValidationError("Invalid file path provided", { filePath });
     }
 
-    if (typeof content !== "string") {
-      throw new ValidationError("Invalid content provided", { filePath });
-    }
-
     try {
-      // Convert absolute path to relative for cache key
       const relativePath = this.getRelativeCachePath(filePath);
       const hash = this.computeHash(content);
       const cached = this.cache[relativePath];
@@ -180,18 +190,19 @@ export class TokenCacheManager implements ITokenCache {
       if (cached && cached.hash === hash) {
         const entryAge = Date.now() - Date.parse(cached.lastUpdated);
         if (entryAge > this.maxCacheAge) {
-          logger.debug(`Cache entry for ${relativePath} has expired`);
+          this.logDebug(`Cache entry for ${relativePath} has expired`);
           delete this.cache[relativePath];
+          this.stats.invalidations++;
+          this.stats.missCount++;
           return null;
         }
+        this.stats.hitCount++;
         return cached.tokens;
       }
+      this.stats.missCount++;
       return null;
     } catch (error) {
-      throw new ValidationError(
-        `Failed to get cached token count: ${error instanceof Error ? error.message : String(error)}`,
-        { filePath }
-      );
+      this.handleError('read', error, filePath);
     }
   }
 
@@ -200,15 +211,8 @@ export class TokenCacheManager implements ITokenCache {
       throw new ValidationError("Invalid file path provided", { filePath });
     }
 
-    if (typeof content !== "string") {
-      throw new ValidationError("Invalid content provided", { filePath });
-    }
-
     if (typeof tokens !== "number" || isNaN(tokens) || tokens < 0) {
-      throw new ValidationError("Invalid token count provided", {
-        filePath,
-        tokens,
-      });
+      throw new ValidationError("Invalid token count provided", { filePath, tokens });
     }
 
     try {
@@ -216,60 +220,49 @@ export class TokenCacheManager implements ITokenCache {
       const entry: ICacheEntry = {
         hash: this.computeHash(content),
         tokens,
-        lastUpdated: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
       };
 
       this.cache[relativePath] = entry;
+      this.updateStats();
       this.saveCache();
-      logger.debug(`Cached ${tokens} tokens for ${relativePath}`);
+      this.logDebug(`Cached ${tokens} tokens for ${relativePath}`);
     } catch (error) {
-      throw new ValidationError(
-        `Failed to cache token count: ${error instanceof Error ? error.message : String(error)}`,
-        { filePath, tokens }
-      );
+      this.handleError('write', error, filePath);
     }
   }
 
   public clear(): void {
     try {
       this.cache = {};
-      if (this.fileSystem.exists(this.cachePath)) {
-        this.fileSystem.deleteFile(this.cachePath);
-        logger.debug(`Cleared cache file at ${this.cachePath}`);
+      this.updateStats();
+      if (this.deps.fileSystem.exists(this.cachePath)) {
+        this.deps.fileSystem.deleteFile(this.cachePath);
+        this.logDebug('Cleared cache file');
       }
     } catch (error) {
-      throw new FileSystemError(
-        `Failed to clear cache: ${error instanceof Error ? error.message : String(error)}`,
-        this.cachePath,
-        "delete"
-      );
+      this.handleError('clear', error);
     }
   }
 
+  private updateStats(): void {
+    const entries = Object.values(this.cache);
+    let oldestDate = Date.now();
+    let newestDate = 0;
+
+    entries.forEach((entry) => {
+      const timestamp = Date.parse(entry.lastUpdated);
+      oldestDate = Math.min(oldestDate, timestamp);
+      newestDate = Math.max(newestDate, timestamp);
+    });
+
+    this.stats.totalEntries = entries.length;
+    this.stats.oldestEntry = entries.length > 0 ? new Date(oldestDate).toISOString() : null;
+    this.stats.newestEntry = entries.length > 0 ? new Date(newestDate).toISOString() : null;
+    this.stats.totalSize = Buffer.byteLength(JSON.stringify(this.cache));
+  }
+
   public getCacheStats(): ICacheStats {
-    try {
-      const entries = Object.values(this.cache);
-      let oldestDate = Date.now();
-      let newestDate = 0;
-
-      entries.forEach((entry) => {
-        const timestamp = Date.parse(entry.lastUpdated);
-        oldestDate = Math.min(oldestDate, timestamp);
-        newestDate = Math.max(newestDate, timestamp);
-      });
-
-      const stats: ICacheStats = {
-        totalEntries: entries.length,
-        oldestEntry: entries.length > 0 ? new Date(oldestDate).toISOString() : null,
-        newestEntry: entries.length > 0 ? new Date(newestDate).toISOString() : null,
-        totalSize: Buffer.byteLength(JSON.stringify(this.cache)),
-      };
-
-      return stats;
-    } catch (error) {
-      throw new ValidationError(
-        `Failed to generate cache statistics: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    return { ...this.stats };
   }
 }

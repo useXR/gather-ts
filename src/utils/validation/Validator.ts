@@ -1,153 +1,260 @@
+// src/utils/validation/Validator.ts
+
 import { ValidationError } from '@/errors';
-import { IValidator, ITypeValidator, IValidationOptions, IValidationResult } from './interfaces/IValidator';
+import { 
+  IValidator, 
+  IValidatorDeps,
+  IValidationOptions, 
+  IValidationResult,
+  ITypeValidator,
+  IValidatorOptions
+} from './interfaces/IValidator';
+
 
 export class Validator implements IValidator, ITypeValidator {
-  public validateNotEmpty<T>(value: T | null | undefined, fieldName: string): T {
-    if (value === null || value === undefined) {
-      throw new ValidationError(`${fieldName} cannot be null or undefined`);
-    }
-    
-    if (typeof value === 'string' && value.trim() === '') {
-      throw new ValidationError(`${fieldName} cannot be empty`);
-    }
-    
-    return value;
+  private readonly debug: boolean;
+
+  constructor(
+    private readonly deps: IValidatorDeps,
+    options: IValidatorOptions = {}
+  ) {
+    this.debug = options.debug || false;
   }
 
-  public validateType(value: unknown, expectedType: string, fieldName: string): void {
-    if (expectedType === 'array' && !this.isArray(value)) {
-      throw new ValidationError(
-        `Invalid type for ${fieldName}`,
-        {
-          providedValue: value,
-          expectedType,
-          actualType: typeof value
-        }
-      );
-    }
+  public async initialize(): Promise<void> {
+    this.logDebug('Validator service initialized');
+  }
 
-    if (typeof value !== expectedType) {
-      throw new ValidationError(
-        `Invalid type for ${fieldName}`,
-        {
-          providedValue: value,
-          expectedType,
-          actualType: typeof value
-        }
-      );
+  public cleanup(): void {
+    this.logDebug('Validator service cleanup');
+  }
+
+  private logDebug(message: string): void {
+    if (this.debug) {
+      this.deps.logger.debug(message);
     }
   }
 
-  public validateRange(value: number, min: number, max: number, fieldName: string): void {
-    this.validateType(value, 'number', fieldName);
-    
-    if (value < min || value > max) {
-      throw new ValidationError(
-        `${fieldName} must be between ${min} and ${max}`,
-        {
-          providedValue: value,
-          min,
-          max
-        }
-      );
-    }
+  private handleValidationError(fieldName: string, message: string, details?: Record<string, unknown>): never {
+    const error = new ValidationError(message, details);
+    this.deps.logger.error(`Validation error for ${fieldName}: ${message}`);
+    throw error;
   }
 
-  public validateArray<T>(
-    array: T[] | null | undefined,
-    fieldName: string,
-    minLength?: number,
-    maxLength?: number
-  ): void {
-    if (!this.isArray(array)) {
-      throw new ValidationError(
-        `${fieldName} must be an array`,
-        {
-          providedValue: array,
-          expectedType: 'array'
-        }
-      );
-    }
-
-    if (minLength !== undefined && array.length < minLength) {
-      throw new ValidationError(
-        `${fieldName} must have at least ${minLength} items`,
-        {
-          providedValue: array.length,
-          minLength
-        }
-      );
-    }
-
-    if (maxLength !== undefined && array.length > maxLength) {
-      throw new ValidationError(
-        `${fieldName} must have at most ${maxLength} items`,
-        {
-          providedValue: array.length,
-          maxLength
-        }
-      );
-    }
-  }
-
-  public validateEnum<T extends string>(
-    value: string,
-    enumValues: readonly T[],
-    fieldName: string
-  ): T {
-    if (!enumValues.includes(value as T)) {
-      throw new ValidationError(
-        `Invalid value for ${fieldName}`,
-        {
-          providedValue: value,
-          allowedValues: Array.from(enumValues)
-        }
-      );
-    }
-    return value as T;
-  }
-
-  public validatePattern(value: string, pattern: RegExp, fieldName: string): void {
-    this.validateType(value, 'string', fieldName);
-
-    if (!pattern.test(value)) {
-      throw new ValidationError(
-        `Invalid format for ${fieldName}`,
-        {
-          providedValue: value,
-          pattern: pattern.toString()
-        }
-      );
-    }
-  }
-
-  public validateObject<T extends object>(
+  public validate<T>(
     value: unknown,
-    requiredFields: (keyof T)[],
-    fieldName: string
-  ): void {
-    if (!this.isObject(value)) {
-      throw new ValidationError(
-        `${fieldName} must be an object`,
-        {
-          providedValue: value,
-          expectedType: 'object'
+    fieldName: string,
+    options: IValidationOptions = {}
+  ): IValidationResult {
+    this.logDebug(`Validating ${fieldName}`);
+    
+    const result: IValidationResult = {
+      isValid: true,
+      errors: [],
+      warnings: []
+    };
+
+    try {
+      // Handle optional fields
+      if (value === undefined || value === null) {
+        if (!options.optional) {
+          result.errors.push(`${fieldName} is required`);
+          result.isValid = false;
         }
+        return result;
+      }
+
+      // Type validation
+      if (options.type && typeof value !== options.type) {
+        result.errors.push(
+          `${fieldName} must be of type ${options.type}, got ${typeof value}`
+        );
+        result.isValid = false;
+        return result;
+      }
+
+      // Type-specific validations
+      if (typeof value === 'string') {
+        this.validateString(value, fieldName, options, result);
+      }
+      if (typeof value === 'number') {
+        this.validateNumber(value, fieldName, options, result);
+      }
+      if (Array.isArray(value)) {
+        this.validateArray(value, fieldName, options, result);
+      }
+      if (this.isObject(value)) {
+        this.validateObject(value, fieldName, options, result);
+      }
+
+      // Custom validation
+      if (options.customValidator) {
+        this.runCustomValidator(value, fieldName, options.customValidator, result);
+      }
+
+    } catch (error) {
+      result.errors.push(error instanceof Error ? error.message : String(error));
+      result.isValid = false;
+      this.deps.logger.error(
+        `Validation error for ${fieldName}: ${error instanceof Error ? error.message : String(error)}`
       );
     }
 
-    const missingFields = requiredFields.filter(field => !(field in value));
-    if (missingFields.length > 0) {
-      throw new ValidationError(
-        `Missing required fields in ${fieldName}`,
-        {
-          missingFields
-        }
+    this.logDebug(`Validation result for ${fieldName}: ${result.isValid ? 'valid' : 'invalid'}`);
+    return result;
+  }
+
+  private validateString(
+    value: string,
+    fieldName: string,
+    options: IValidationOptions,
+    result: IValidationResult
+  ): void {
+    if (!options.allowEmpty && value.trim() === '') {
+      result.errors.push(`${fieldName} cannot be empty`);
+      result.isValid = false;
+      return;
+    }
+
+    if (options.minLength !== undefined && value.length < options.minLength) {
+      result.errors.push(
+        `${fieldName} must be at least ${options.minLength} characters long`
       );
+      result.isValid = false;
+    }
+
+    if (options.maxLength !== undefined && value.length > options.maxLength) {
+      result.errors.push(
+        `${fieldName} cannot exceed ${options.maxLength} characters`
+      );
+      result.isValid = false;
+    }
+
+    if (options.pattern && !options.pattern.test(value)) {
+      result.errors.push(`${fieldName} has an invalid format`);
+      result.isValid = false;
     }
   }
 
-  // Type guard implementations
+  private validateNumber(
+    value: number,
+    fieldName: string,
+    options: IValidationOptions,
+    result: IValidationResult
+  ): void {
+    if (options.min !== undefined && value < options.min) {
+      result.errors.push(`${fieldName} must be at least ${options.min}`);
+      result.isValid = false;
+    }
+
+    if (options.max !== undefined && value > options.max) {
+      result.errors.push(`${fieldName} cannot exceed ${options.max}`);
+      result.isValid = false;
+    }
+
+    if (options.integer && !Number.isInteger(value)) {
+      result.errors.push(`${fieldName} must be an integer`);
+      result.isValid = false;
+    }
+  }
+
+  private validateArray(
+    value: unknown[],
+    fieldName: string,
+    options: IValidationOptions,
+    result: IValidationResult
+  ): void {
+    if (options.minLength !== undefined && value.length < options.minLength) {
+      result.errors.push(
+        `${fieldName} must contain at least ${options.minLength} items`
+      );
+      result.isValid = false;
+    }
+
+    if (options.maxLength !== undefined && value.length > options.maxLength) {
+      result.errors.push(
+        `${fieldName} cannot contain more than ${options.maxLength} items`
+      );
+      result.isValid = false;
+    }
+
+    if (options.arrayType) {
+      const invalidItems = value.filter(item => typeof item !== options.arrayType);
+      if (invalidItems.length > 0) {
+        result.errors.push(
+          `All items in ${fieldName} must be of type ${options.arrayType}`
+        );
+        result.isValid = false;
+      }
+    }
+  }
+
+  private validateObject(
+    value: object,
+    fieldName: string,
+    options: IValidationOptions,
+    result: IValidationResult
+  ): void {
+    if (options.requiredFields) {
+      const missingFields = options.requiredFields.filter(
+        field => !(field in value)
+      );
+      if (missingFields.length > 0) {
+        result.errors.push(
+          `${fieldName} is missing required fields: ${missingFields.join(', ')}`
+        );
+        result.isValid = false;
+      }
+    }
+  }
+  
+  public validatePath(path: string, context: string): void {
+    if (!path || typeof path !== 'string') {
+      throw new ValidationError(`Invalid ${context} path`, { path });
+    }
+
+    // Check for invalid characters in path
+    const invalidChars = /[<>:"|?*]/g;
+    if (invalidChars.test(path)) {
+      throw new ValidationError(
+        `${context} path contains invalid characters`,
+        { path, invalidChars: '<>:"|?*' }
+      );
+    }
+
+    // Check for relative path navigation
+    if (path.includes('../') || path.includes('..\\')) {
+      throw new ValidationError(
+        `${context} path cannot contain relative navigation`,
+        { path }
+      );
+    }
+
+    // Log debug info
+    this.logDebug(`Validated path for ${context}: ${path}`);
+  }
+
+  private runCustomValidator(
+    value: unknown,
+    fieldName: string,
+    validator: (value: unknown) => boolean,
+    result: IValidationResult
+  ): void {
+    try {
+      const customResult = validator(value);
+      if (!customResult) {
+        result.errors.push(`${fieldName} failed custom validation`);
+        result.isValid = false;
+      }
+    } catch (error) {
+      result.errors.push(
+        `Custom validation error for ${fieldName}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      result.isValid = false;
+    }
+  }
+
+  // Type Guard Implementations
   public isString(value: unknown): value is string {
     return typeof value === 'string';
   }
@@ -172,76 +279,59 @@ export class Validator implements IValidator, ITypeValidator {
     return value instanceof Date && !isNaN(value.getTime());
   }
 
-  // Validation with options
-  public validate<T>(
-    value: unknown,
-    fieldName: string,
-    options: IValidationOptions = {}
-  ): IValidationResult {
-    const result: IValidationResult = {
-      isValid: true,
-      errors: [],
-      warnings: []
-    };
-
-    try {
-      // Handle optional fields
-      if (value === undefined || value === null) {
-        result.isValid = options.optional ?? false; // Use nullish coalescing
-        if (!options.optional) {
-          result.errors.push(`${fieldName} is required`);
-        }
-        return result;
-      }
-
-      // Handle empty values
-      if (typeof value === 'string' && value.trim() === '') {
-        if (!options.allowEmpty) {
-          result.errors.push(`${fieldName} cannot be empty`);
-          result.isValid = false;
-          return result;
-        }
-      }
-
-      // Length validations for strings and arrays
-      if ((typeof value === 'string' || Array.isArray(value))) {
-        const length = (value as string | unknown[]).length;
-        
-        if (options.minLength !== undefined && length < options.minLength) {
-          result.errors.push(`${fieldName} must be at least ${options.minLength} characters long`);
-        }
-        
-        if (options.maxLength !== undefined && length > options.maxLength) {
-          result.errors.push(`${fieldName} must not exceed ${options.maxLength} characters`);
-        }
-      }
-
-      // Pattern validation for strings
-      if (typeof value === 'string' && options.pattern) {
-        if (!options.pattern.test(value)) {
-          result.errors.push(`${fieldName} has an invalid format`);
-        }
-      }
-
-      // Custom validation
-      if (options.customValidator) {
-        const customValidationResult = options.customValidator(value);
-        if (customValidationResult instanceof Promise) {
-          throw new Error('Async validators are not supported in synchronous validate method');
-        }
-        if (!customValidationResult) {
-          result.errors.push(`${fieldName} failed custom validation`);
-        }
-      }
-
-    } catch (error) {
-      result.errors.push(error instanceof Error ? error.message : String(error));
+  // Helper Methods
+  public validateNotEmpty<T>(value: T | null | undefined, fieldName: string): T {
+    const result = this.validate(value, fieldName, { optional: false });
+    if (!result.isValid) {
+      this.handleValidationError(fieldName, result.errors[0]);
     }
+    return value as T;
+  }
 
-    result.isValid = result.errors.length === 0;
-    return result;
+  public validateType(value: unknown, expectedType: string, fieldName: string): void {
+    const result = this.validate(value, fieldName, { type: expectedType });
+    if (!result.isValid) {
+      this.handleValidationError(fieldName, result.errors[0]);
+    }
+  }
+
+  public validateRange(value: number, min: number, max: number, fieldName: string): void {
+    const result = this.validate(value, fieldName, {
+      type: 'number',
+      min,
+      max
+    });
+    if (!result.isValid) {
+      this.handleValidationError(fieldName, result.errors[0]);
+    }
+  }
+
+  public validateEnum<T extends string>(
+    value: string,
+    enumValues: readonly T[],
+    fieldName: string
+  ): T {
+    const result = this.validate(value, fieldName, {
+      type: 'string',
+      customValidator: (val) => enumValues.includes(val as T)
+    });
+    if (!result.isValid) {
+      this.handleValidationError(
+        fieldName,
+        `${fieldName} must be one of: ${enumValues.join(', ')}`,
+        { value, allowedValues: enumValues }
+      );
+    }
+    return value as T;
+  }
+
+  public validatePattern(value: string, pattern: RegExp, fieldName: string): void {
+    const result = this.validate(value, fieldName, {
+      type: 'string',
+      pattern
+    });
+    if (!result.isValid) {
+      this.handleValidationError(fieldName, result.errors[0]);
+    }
   }
 }
-
-// Export a default instance
-export const validator = new Validator();

@@ -1,16 +1,40 @@
 // src/core/dependency/interfaces/IIgnoreHandler.ts
-export interface IIgnoreHandler {
-  shouldIgnore(filePath: string): boolean;
-  getPatterns(): string[];
-  addPattern(pattern: string): void;
-  removePattern(pattern: string): boolean;
-  resetPatterns(): void;
-  printDebugInfo(filePath: string): void;
+
+import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
+import { ILogger } from '@/utils/logging/interfaces/ILogger';
+
+export interface IIgnoreHandlerDeps {
+  fileSystem: IFileSystem;
+  logger: ILogger;
 }
 
 export interface IIgnoreHandlerOptions {
   debug?: boolean;
   extraPatterns?: string[];
+}
+
+export interface ILoadPatternsOptions {
+  skipGitignore?: boolean;
+  validate?: boolean;
+}
+
+export interface IIgnoreHandler {
+  // Core functionality
+  shouldIgnore(filePath: string): boolean;
+  validateFilePath(filePath: string): void;
+
+  // Pattern management
+  getPatterns(): string[];
+  addPattern(pattern: string): void;
+  removePattern(pattern: string): boolean;
+  resetPatterns(): void;
+
+  // Debug utilities
+  printDebugInfo(filePath: string): void;
+
+  // Lifecycle methods
+  initialize(): Promise<void>;
+  cleanup(): void;
 }
 
 export interface IPatternValidationResult {
@@ -21,7 +45,6 @@ export interface IPatternValidationResult {
 
 export interface IIgnorePatternValidator {
   validatePattern(pattern: string): string;
-  validateFilePath(filePath: string): void;
   parsePattern(pattern: string): IPatternValidationResult;
   validatePatterns(patterns: string[]): string[];
 }

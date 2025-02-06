@@ -1,22 +1,24 @@
-import { logger } from "@/utils/logging";
-import { fileSystem } from "@/utils/filesystem/FileSystem";
-import { ConfigurationError, FileSystemError, ValidationError } from "@/errors";
-import { IConfigLoadResult, IDeppackConfig } from "@/types/config";
-import { TiktokenModel } from "@/types/models/tokenizer";
-import { 
-  IConfigManager, 
-  IConfigLoader, 
+// src/config/ConfigManager.ts
+
+import { EventEmitter } from "events";
+import { ConfigurationError, ValidationError } from "@/errors";
+import {
+  IConfigManager,
+  IConfigManagerDeps,
   IConfigManagerOptions,
-  IConfigManagerStatic,
+  IConfigChangeEvent,
+  IConfigLoadOptions,
+  IConfigMetrics
 } from "./interfaces/IConfigManager";
-import { ConfigValidator } from "./validators/ConfigValidator";
-import { IFileSystem } from "@/utils/filesystem/interfaces/IFileSystem";
+import { IDeppackConfig, IConfigValidationResult } from "@/types/config";
+import { TiktokenModel } from "@/types/models/tokenizer";
 
 const defaultConfig: IDeppackConfig = {
+  maxDepth: 5,
   topFilesCount: 5,
   showTokenCount: true,
   tokenizer: {
-    model: "gpt-4",
+    model: "gpt-4" as TiktokenModel,
     showWarning: true,
   },
   outputFormat: {
@@ -24,71 +26,175 @@ const defaultConfig: IDeppackConfig = {
     includeGenerationTime: true,
     includeUsageGuidelines: true,
   },
+  debug: false,
+  cacheTokenCounts: true,
 };
 
-export class ConfigManager implements IConfigManager, IConfigLoader {
+export class ConfigManager extends EventEmitter implements IConfigManager {
   private config: IDeppackConfig;
   private readonly configPath: string;
   private readonly projectRoot: string;
-  private readonly validator: ConfigValidator;
-  private readonly fs: IFileSystem;
+  private readonly debug: boolean;
+  private readonly watch: boolean;
+  private watchHandler?: NodeJS.Timeout;
+  private metrics: IConfigMetrics = {
+    loads: 0,
+    updates: 0,
+    validationErrors: 0,
+    lastUpdate: undefined,
+  };
+  private isInitialized: boolean = false;
 
-  constructor(projectRoot: string, options: IConfigManagerOptions = {}) {
-    this.fs = options.fileSystem || fileSystem;
-    
-    if (!this.fs.exists(projectRoot)) {
-      throw new ValidationError("Project root directory does not exist", {
-        projectRoot,
-      });
+  constructor(
+    projectRoot: string,
+    private readonly deps: IConfigManagerDeps,
+    options: IConfigManagerOptions = {}
+  ) {
+    super();
+
+    if (!projectRoot || !this.deps.fileSystem.exists(projectRoot)) {
+      throw new ConfigurationError(
+        "Project root directory does not exist",
+        projectRoot
+      );
     }
 
     this.projectRoot = projectRoot;
-    this.configPath = options.configPath || 
-      this.fs.joinPath(projectRoot, "deppack.config.json");
-    this.validator = new ConfigValidator();
+    this.debug = options.debug || false;
+    this.watch = options.watch || false;
+    this.configPath = options.configPath ||
+      this.deps.fileSystem.joinPath(projectRoot, "deppack.config.json");
+
+    this.config = { ...defaultConfig };
+    this.initializeMetrics();
     
-    if (options.debug) {
-      logger.debug(`Looking for config at: ${this.configPath}`);
-    }
-    
-    this.config = this.loadConfig();
+    this.logDebug(`ConfigManager created with root: ${projectRoot}`);
+    this.logDebug(`Using config path: ${this.configPath}`);
   }
 
-  public loadConfig(overrides?: Partial<IDeppackConfig>): IDeppackConfig {
-    let fileConfig: Partial<IDeppackConfig> = {};
-    let loadResult: IConfigLoadResult = {
-      config: defaultConfig,
-      source: 'default',
-      validation: { isValid: true, errors: [], warnings: [] }
+  private initializeMetrics(): void {
+    this.metrics = {
+      loads: 0,
+      updates: 0,
+      validationErrors: 0,
+      lastUpdate: undefined,
     };
+  }
+
+  private logDebug(message: string): void {
+    if (this.debug) {
+      this.deps.logger.debug(message);
+    }
+  }
+
+  public async initialize(): Promise<void> {
+    this.logDebug("Initializing ConfigManager");
 
     try {
-      if (this.fs.exists(this.configPath)) {
-        try {
-          const configContent = this.fs.readFileSync(this.configPath, 'utf8');
-          fileConfig = JSON.parse(configContent);
-          logger.info("Loaded configuration from deppack.config.json");
-          loadResult.source = 'file';
-        } catch (error) {
-          if (error instanceof SyntaxError) {
-            throw new ConfigurationError(
-              "Invalid JSON in config file",
-              this.configPath
-            );
-          }
-          throw new FileSystemError(
-            error instanceof Error ? error.message : "Unknown error",
-            this.configPath,
-            "read"
-          );
-        }
-      } else {
-        logger.warn("No deppack.config.json found, using defaults");
+      if (this.isInitialized) {
+        this.logDebug("ConfigManager already initialized");
+        return;
       }
+
+      await this.loadConfig();
+
+      if (this.watch) {
+        this.startWatching();
+      }
+
+      this.isInitialized = true;
+      this.logDebug("ConfigManager initialization complete");
     } catch (error) {
-      if (error instanceof ConfigurationError || error instanceof FileSystemError) {
-        throw error;
+      throw new ConfigurationError(
+        `Failed to initialize ConfigManager: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        this.configPath
+      );
+    }
+  }
+
+  public cleanup(): void {
+    this.logDebug("Cleaning up ConfigManager");
+
+    if (this.watchHandler) {
+      clearInterval(this.watchHandler);
+      this.watchHandler = undefined;
+    }
+
+    this.removeAllListeners();
+    this.isInitialized = false;
+  }
+
+  private startWatching(): void {
+    this.logDebug("Starting config file watch");
+
+    if (this.watchHandler) {
+      clearInterval(this.watchHandler);
+    }
+
+    this.watchHandler = setInterval(async () => {
+      try {
+        const stats = this.deps.fileSystem.statSync(this.configPath);
+        if (stats.mtime.getTime() !== this.metrics.lastUpdate) {
+          this.logDebug("Config file change detected");
+          await this.loadConfig({ isWatch: true });
+        }
+      } catch (error) {
+        this.deps.logger.warn(
+          `Error watching config file: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
       }
+    }, 1000) as unknown as NodeJS.Timeout;
+  }
+
+  private async loadConfig(options: IConfigLoadOptions = {}): Promise<void> {
+    this.logDebug(`Loading configuration${options.isWatch ? ' (watch)' : ''}`);
+
+    let fileConfig: Partial<IDeppackConfig> = {};
+
+    try {
+      if (this.deps.fileSystem.exists(this.configPath)) {
+        const configContent = await this.deps.fileSystem.readFile(
+          this.configPath
+        );
+        fileConfig = JSON.parse(configContent);
+        this.logDebug("Loaded configuration from file");
+      } else {
+        this.logDebug("No config file found, using defaults");
+      }
+
+      const newConfig = {
+        ...defaultConfig,
+        ...fileConfig,
+      };
+
+      const validation = this.validateConfig(newConfig);
+      if (!validation.isValid) {
+        throw new ConfigurationError(
+          `Configuration validation failed: ${validation.errors.join(", ")}`,
+          this.configPath
+        );
+      }
+
+      const oldConfig = this.config;
+      this.config = newConfig;
+
+      this.metrics.loads++;
+      this.metrics.lastUpdate = Date.now();
+
+      this.emit("configChange", {
+        type: "update",
+        oldConfig,
+        newConfig,
+        timestamp: Date.now(),
+        isWatch: options.isWatch
+      } as IConfigChangeEvent);
+
+    } catch (error) {
+      this.metrics.validationErrors++;
       throw new ConfigurationError(
         `Failed to load configuration: ${
           error instanceof Error ? error.message : String(error)
@@ -96,47 +202,100 @@ export class ConfigManager implements IConfigManager, IConfigLoader {
         this.configPath
       );
     }
+  }
 
-    const mergedConfig = {
-      ...defaultConfig,
-      ...fileConfig,
-      ...overrides,
-    };
+  public getConfig(): IDeppackConfig {
+    if (!this.isInitialized) {
+      throw new ConfigurationError("ConfigManager not initialized", this.configPath);
+    }
+    return { ...this.config };
+  }
+
+  public async updateConfig(updates: Partial<IDeppackConfig>): Promise<IDeppackConfig> {
+    this.logDebug("Updating configuration");
+    
+    try {
+      const newConfig = {
+        ...this.config,
+        ...updates,
+      };
+
+      const validation = this.validateConfig(newConfig);
+      if (!validation.isValid) {
+        throw new ValidationError(
+          `Invalid configuration updates: ${validation.errors.join(", ")}`
+        );
+      }
+
+      const oldConfig = this.config;
+      this.config = newConfig;
+
+      this.metrics.updates++;
+      this.metrics.lastUpdate = Date.now();
+
+      await this.saveConfig();
+
+      this.emit("configChange", {
+        type: "update",
+        oldConfig,
+        newConfig,
+        timestamp: Date.now(),
+      } as IConfigChangeEvent);
+
+      return this.getConfig();
+    } catch (error) {
+      throw new ConfigurationError(
+        `Failed to update configuration: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        this.configPath
+      );
+    }
+  }
+
+  public async saveConfig(): Promise<void> {
+    this.logDebug("Saving configuration");
 
     try {
-      loadResult.validation = this.validator.validateAll(mergedConfig);
-      if (!loadResult.validation.isValid) {
-        throw new ConfigurationError(
-          `Configuration validation failed: ${loadResult.validation.errors.join(', ')}`,
-          this.configPath
-        );
-      }
-
-      // Log any warnings
-      loadResult.validation.warnings.forEach(warning => {
-        logger.warn(`Configuration warning: ${warning}`);
-      });
-
+      const configString = JSON.stringify(this.config, null, 2);
+      await this.deps.fileSystem.writeFile(this.configPath, configString);
+      this.logDebug("Configuration saved successfully");
     } catch (error) {
-      if (error instanceof ValidationError) {
-        throw new ConfigurationError(
-          `Configuration validation failed: ${error.message}`,
-          this.configPath
-        );
-      }
-      throw error;
+      throw new ConfigurationError(
+        `Failed to save configuration: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        this.configPath
+      );
     }
+  }
 
-    loadResult.config = mergedConfig as IDeppackConfig;
-    return loadResult.config;
+  public reset(): void {
+    this.logDebug("Resetting configuration to defaults");
+
+    const oldConfig = this.config;
+    this.config = { ...defaultConfig };
+    this.metrics.updates++;
+    this.metrics.lastUpdate = Date.now();
+
+    this.emit("configChange", {
+      type: "reset",
+      oldConfig,
+      newConfig: this.config,
+      timestamp: Date.now(),
+    } as IConfigChangeEvent);
+  }
+
+  public getMetrics(): IConfigMetrics {
+    return { ...this.metrics };
+  }
+
+  public onConfigChange(callback: (event: IConfigChangeEvent) => void): void {
+    this.on("configChange", callback);
   }
 
   public getProjectRoot(): string {
     return this.projectRoot;
-  }
-
-  public getConfig(): IDeppackConfig {
-    return { ...this.config };
   }
 
   public getTokenizerModel(): string {
@@ -156,7 +315,7 @@ export class ConfigManager implements IConfigManager, IConfigLoader {
   }
 
   public isDebugEnabled(): boolean {
-    return this.config.debug ?? false;
+    return this.debug;
   }
 
   public getModelTokenLimit(): number {
@@ -165,7 +324,7 @@ export class ConfigManager implements IConfigManager, IConfigLoader {
       "gpt-4": 8192,
       "gpt-4o": 128000,
       "gpt-4o-mini": 128000,
-      o1: 128000,
+      "o1": 128000,
       "o1-mini": 128000,
       "o3-mini": 200000,
     };
@@ -186,40 +345,144 @@ export class ConfigManager implements IConfigManager, IConfigLoader {
 
     const limit = this.getModelTokenLimit();
     if (totalTokens > limit) {
-      return `Total tokens (${totalTokens}) exceed ${this.config.tokenizer.model}'s context limit of ${limit}`;
+      return `Total tokens (${totalTokens.toLocaleString()}) exceed ${
+        this.config.tokenizer.model
+      }'s context limit of ${limit.toLocaleString()}`;
     }
     return null;
   }
 
-  public static generateDefaultConfig(outputPath: string): void {
+  public validateConfig(config: Partial<IDeppackConfig>): IConfigValidationResult {
+    this.logDebug("Validating configuration");
+
+    const result: IConfigValidationResult = {
+      isValid: true,
+      errors: [],
+      warnings: [],
+    };
+
     try {
-      const fs = fileSystem;
-      const config: IDeppackConfig = {
-        ...defaultConfig,
-        debug: false,
-        cacheTokenCounts: true,
-        maxDepth: 5,
-      };
+      // Validate with deps.validator
+      this.deps.validator.validate(config, "config", {
+        requiredFields: ["tokenizer", "outputFormat"]
+      });
 
-      // Ensure directory exists
-      const outputDir = fs.getDirName(outputPath);
-      if (!fs.exists(outputDir)) {
-        fs.createDirectory(outputDir, true);
+      // Validate tokenizer configuration
+      if (config.tokenizer) {
+        this.validateTokenizerConfig(config, result);
       }
 
-      fs.writeFileSync(outputPath, JSON.stringify(config, null, 2), { encoding: 'utf8' });
-      logger.success(`Generated default config at ${outputPath}`);
+      // Validate output format
+      if (config.outputFormat) {
+        this.validateOutputFormat(config, result);
+      }
+
+      // Validate max depth
+      if (config.maxDepth !== undefined) {
+        if (typeof config.maxDepth !== "number" || config.maxDepth < 0) {
+          result.errors.push("maxDepth must be a positive number or undefined");
+          result.isValid = false;
+        } else if (config.maxDepth > 10) {
+          result.warnings.push("High maxDepth value may impact performance");
+        }
+      }
+
+      // Validate top files count
+      if (config.topFilesCount !== undefined) {
+        if (
+          typeof config.topFilesCount !== "number" ||
+          config.topFilesCount < 1
+        ) {
+          result.errors.push("topFilesCount must be a positive number");
+          result.isValid = false;
+        } else if (config.topFilesCount > 20) {
+          result.warnings.push(
+            "Large topFilesCount value may impact readability"
+          );
+        }
+      }
     } catch (error) {
-      if (error instanceof Error) {
-        throw new FileSystemError(error.message, outputPath, "write");
-      }
-      throw new ConfigurationError(
-        `Failed to generate default configuration: ${String(error)}`,
-        outputPath
+      result.errors.push(
+        error instanceof Error ? error.message : String(error)
       );
+      result.isValid = false;
+    }
+
+    // Update metrics if validation failed
+    if (!result.isValid) {
+      this.metrics.validationErrors++;
+    }
+
+    return result;
+  }
+
+  private validateTokenizerConfig(
+    config: Partial<IDeppackConfig>,
+    result: IConfigValidationResult
+  ): void {
+    const validModels: TiktokenModel[] = [
+      "gpt-3.5-turbo",
+      "gpt-4",
+      "gpt-4o",
+      "gpt-4o-mini",
+      "o1",
+      "o1-mini",
+      "o3-mini",
+    ];
+
+    if (!config.tokenizer) {
+      result.errors.push("Missing tokenizer configuration");
+      result.isValid = false;
+      return;
+    }
+
+    if (!validModels.includes(config.tokenizer.model)) {
+      result.errors.push(
+        `Invalid tokenizer model. Valid models are: ${validModels.join(", ")}`
+      );
+      result.isValid = false;
+    }
+
+    if (typeof config.tokenizer.showWarning !== "boolean") {
+      result.errors.push("tokenizer.showWarning must be a boolean");
+      result.isValid = false;
+    }
+  }
+
+  private validateOutputFormat(
+    config: Partial<IDeppackConfig>,
+    result: IConfigValidationResult
+  ): void {
+    if (!config.outputFormat) {
+      result.errors.push("Missing output format configuration");
+      result.isValid = false;
+      return;
+    }
+
+    const booleanFields = [
+      "includeSummaryInFile",
+      "includeGenerationTime",
+      "includeUsageGuidelines",
+    ] as const;
+
+    booleanFields.forEach((field) => {
+      if (
+        config.outputFormat![field] !== undefined &&
+        typeof config.outputFormat![field] !== "boolean"
+      ) {
+        result.errors.push(`outputFormat.${field} must be a boolean`);
+        result.isValid = false;
+      }
+    });
+
+    if (
+      config.outputFormat.format !== undefined &&
+      !["json", "text", "markdown"].includes(config.outputFormat.format)
+    ) {
+      result.errors.push(
+        "outputFormat.format must be one of: json, text, markdown"
+      );
+      result.isValid = false;
     }
   }
 }
-
-// Ensure the static interface is implemented
-export const ConfigManagerStatic: IConfigManagerStatic = ConfigManager;

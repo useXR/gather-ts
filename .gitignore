@@ -4,3 +4,4 @@ dist
 .gather-ts-ignore
 gather-ts.config.json
 repomix-output.txt
+/coverage

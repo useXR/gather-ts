@@ -1,24 +1,16 @@
 // src/container/interfaces/IContainer.ts
 
-import { IService } from '@/types/services';
-
-export interface IContainerOptions {
-  debug?: boolean;
-  maxCacheAge?: number;
-  fileExtensions?: string[];
-  customTsConfigPath?: string;
-  batchSize?: number;
-}
+import { IService } from "@/types/services";
 
 export interface IServiceIdentifier<T = any> {
   toString(): string;
 }
 
-export interface IServiceFactory<T = any> {
+export interface IServiceFactory<T extends IService> {
   (): T | Promise<T>;
 }
 
-export interface IServiceRegistration<T = any> {
+export interface IServiceRegistration<T extends IService = any> {
   token: IServiceIdentifier<T>;
   factory: IServiceFactory<T>;
   instance?: T;
@@ -26,19 +18,22 @@ export interface IServiceRegistration<T = any> {
 }
 
 export interface IContainerEvents {
-  'service:registered': { token: string; timestamp: number };
-  'service:resolved': { token: string; timestamp: number };
-  'service:error': { token: string; error: Error; timestamp: number };
-  'initialization:start': { timestamp: number };
-  'initialization:complete': { timestamp: number };
-  'cleanup:start': { timestamp: number };
-  'cleanup:complete': { timestamp: number };
+  "service:registered": { token: string; timestamp: number };
+  "service:resolved": { token: string; timestamp: number };
+  "service:error": { token: string; error: Error; timestamp: number };
+  "initialization:start": { timestamp: number };
+  "initialization:complete": { timestamp: number };
+  "cleanup:start": { timestamp: number };
+  "cleanup:complete": { timestamp: number };
 }
 
 export interface IContainer extends IService {
-  register<T>(token: IServiceIdentifier<T>, instance: T): void;
-  registerFactory<T>(token: IServiceIdentifier<T>, factory: IServiceFactory<T>): void;
-  resolve<T>(token: IServiceIdentifier<T>): T;
+  register<T extends IService>(token: IServiceIdentifier<T>, instance: T): void;
+  registerFactory<T extends IService>(
+    token: IServiceIdentifier<T>,
+    factory: IServiceFactory<T>
+  ): void;
+  resolve<T extends IService>(token: IServiceIdentifier<T>): T;
   hasService(token: IServiceIdentifier): boolean;
   clear(): void;
 
@@ -59,5 +54,16 @@ export interface IContainer extends IService {
 }
 
 export interface IContainerConfiguration {
-  configureContainer(rootDir: string, options?: IContainerOptions): IContainer;
+  configureContainer(
+    rootDir: string,
+    options?: IContainerOptions
+  ): Promise<IContainer>;
+}
+
+export interface IContainerOptions {
+  debug?: boolean;
+  maxCacheAge?: number;
+  fileExtensions?: string[];
+  customTsConfigPath?: string;
+  batchSize?: number;
 }

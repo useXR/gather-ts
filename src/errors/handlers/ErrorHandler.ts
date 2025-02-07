@@ -1,22 +1,23 @@
 // src/errors/handlers/ErrorHandler.ts
 
+import { BaseService } from '@/types/services';
 import { DeppackError } from '../exceptions';
 import { IErrorHandler, IErrorProcessingStrategy, IErrorHandlerDeps, IErrorHandlerOptions, IErrorOperationOptions } from '../interfaces/IErrorHandler';
 
 
-export class ErrorHandler implements IErrorHandler {
+export class ErrorHandler extends BaseService implements IErrorHandler {
   private readonly processingStrategies: IErrorProcessingStrategy[] = [];
   private readonly debug: boolean;
   private readonly logToConsole: boolean;
   private readonly logToFile: boolean;
   private readonly logFilePath?: string;
   private readonly rethrow: boolean;
-  private isInitialized: boolean = false;
 
   constructor(
     private readonly deps: IErrorHandlerDeps,
     options: IErrorHandlerOptions = {}
   ) {
+    super();
     this.debug = options.debug || false;
     this.logToConsole = options.logToConsole ?? true;
     this.logToFile = options.logToFile || false;
@@ -28,15 +29,11 @@ export class ErrorHandler implements IErrorHandler {
     }
   }
 
-  public async initialize(): Promise<void> {
+  public override async initialize(): Promise<void> {
+    await super.initialize();
     this.logDebug('Initializing ErrorHandler');
 
     try {
-      if (this.isInitialized) {
-        this.logDebug('ErrorHandler already initialized');
-        return;
-      }
-
       if (this.logToFile && this.logFilePath) {
         this.logDebug(`Setting up file logging at ${this.logFilePath}`);
         const logDir = this.deps.fileSystem.getDirName(this.logFilePath);
@@ -48,7 +45,6 @@ export class ErrorHandler implements IErrorHandler {
         this.registerStrategy(this.createFileStrategy());
       }
 
-      this.isInitialized = true;
       this.logDebug('ErrorHandler initialization complete');
     } catch (error) {
       this.deps.logger.error(
@@ -58,10 +54,10 @@ export class ErrorHandler implements IErrorHandler {
     }
   }
 
-  public cleanup(): void {
+  public override cleanup(): void {
     this.logDebug('Cleaning up ErrorHandler');
     this.processingStrategies.length = 0;
-    this.isInitialized = false;
+    super.cleanup();
   }
 
   private logDebug(message: string): void {

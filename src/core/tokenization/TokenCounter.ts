@@ -14,6 +14,7 @@ import {
 import { TiktokenModel } from "models/tokenizer";
 import { IFileWithContent } from "files";
 import { ISummaryStats } from "stats";
+import { BaseService } from "@/types/services"
 
 const MODEL_CONFIGS: Record<TiktokenModel, ITokenizerModelConfig> = {
   "gpt-3.5-turbo": { name: "gpt-3.5-turbo", contextLimit: 16384 },
@@ -25,7 +26,7 @@ const MODEL_CONFIGS: Record<TiktokenModel, ITokenizerModelConfig> = {
   "o3-mini": { name: "o3-mini", contextLimit: 200000 }
 };
 
-export class TokenCounter implements ITokenCounter {
+export class TokenCounter extends BaseService implements ITokenCounter {
   private encoder: any = null;
   private readonly debug: boolean;
   private readonly batchSize: number;
@@ -43,17 +44,55 @@ export class TokenCounter implements ITokenCounter {
     averageTokensPerFile: 0,
     averageProcessingTime: 0
   };
-  private isInitialized: boolean = false;
 
   constructor(
     private readonly deps: ITokenCounterDeps,
     options: ITokenCounterOptions = {}
   ) {
+    super();
     this.debug = options.debug || false;
     this.batchSize = options.batchSize || 100;
     this.modelOverride = options.modelOverride;
     this.enableCache = options.enableCache ?? true;
     this.startTime = Date.now();
+  }
+
+  public override async initialize(): Promise<void> {
+    await super.initialize();
+    this.logDebug('Initializing TokenCounter');
+    
+    try {
+      // Initialize encoder
+      await this.getEncoder();
+      
+      // Initialize cache if provided
+      if (this.deps.cache?.initialize) {
+        await this.deps.cache.initialize();
+      }
+
+      this.startTime = Date.now();
+      this.logDebug('TokenCounter initialization complete');
+    } catch (error) {
+      this.handleError(error, 'initialize');
+    }
+  }
+
+  public override cleanup(): void {
+    this.logDebug('Cleaning up TokenCounter');
+    try {
+      if (this.encoder) {
+        this.encoder.free();
+        this.encoder = null;
+      }
+      if (this.deps.cache?.cleanup) {
+        this.deps.cache.cleanup();
+      }
+      super.cleanup();
+    } catch (error) {
+      this.deps.logger.warn(
+        `Cleanup error: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   private initializeStats(): void {
@@ -88,48 +127,6 @@ export class TokenCounter implements ITokenCounter {
     throw tokenizationError;
   }
 
-  public async initialize(): Promise<void> {
-    this.logDebug('Initializing TokenCounter');
-    
-    try {
-      if (this.isInitialized) {
-        this.logDebug('TokenCounter already initialized');
-        return;
-      }
-
-      // Initialize encoder
-      await this.getEncoder();
-      
-      // Initialize cache if provided
-      if (this.deps.cache?.initialize) {
-        await this.deps.cache.initialize();
-      }
-
-      this.startTime = Date.now();
-      this.isInitialized = true;
-      this.logDebug('TokenCounter initialization complete');
-    } catch (error) {
-      this.handleError(error, 'initialize');
-    }
-  }
-
-  public cleanup(): void {
-    this.logDebug('Cleaning up TokenCounter');
-    try {
-      if (this.encoder) {
-        this.encoder.free();
-        this.encoder = null;
-      }
-      if (this.deps.cache?.cleanup) {
-        this.deps.cache.cleanup();
-      }
-      this.isInitialized = false;
-    } catch (error) {
-      this.deps.logger.warn(
-        `Cleanup error: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
 
   private getCurrentModel(): TiktokenModel {
     return this.modelOverride || this.deps.configManager.getTokenizerModel() as TiktokenModel;
@@ -172,11 +169,19 @@ export class TokenCounter implements ITokenCounter {
         this.getCurrentModel()
       );
     }
-
-    if (!text) {
-      throw new ValidationError("Empty text provided for tokenization", { filePath });
+  
+    // Handle empty text more gracefully
+    if (!text || text.trim() === '') {
+      this.logDebug(`Empty content in file: ${filePath}, returning 0 tokens`);
+      this.updateStats({
+        totalTokensCounted: 0,
+        totalFilesProcessed: 1,
+        totalProcessingTime: Date.now() - startTime,
+        lastProcessedFile: filePath
+      });
+      return 0;
     }
-
+  
     try {
       this.logDebug(`Counting tokens for ${filePath}`);
 

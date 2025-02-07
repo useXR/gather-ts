@@ -2,6 +2,7 @@
 
 import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
 import { ILogger } from '@/utils/logging/interfaces/ILogger';
+import { IService } from '@/types/services';
 
 export interface IIgnoreHandlerDeps {
   fileSystem: IFileSystem;
@@ -18,7 +19,7 @@ export interface ILoadPatternsOptions {
   validate?: boolean;
 }
 
-export interface IIgnoreHandler {
+export interface IIgnoreHandler extends IService {
   // Core functionality
   shouldIgnore(filePath: string): boolean;
   validateFilePath(filePath: string): void;

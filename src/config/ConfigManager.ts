@@ -8,10 +8,26 @@ import {
   IConfigManagerOptions,
   IConfigChangeEvent,
   IConfigLoadOptions,
-  IConfigMetrics
+  IConfigMetrics,
 } from "./interfaces/IConfigManager";
 import { IDeppackConfig, IConfigValidationResult } from "@/types/config";
 import { TiktokenModel } from "@/types/models/tokenizer";
+import { BaseService } from "@/types/services"
+
+// Create a class that extends EventEmitter and implements needed methods
+class EventEmitterBase extends EventEmitter {
+  on(event: string | symbol, listener: (...args: any[]) => void): this {
+    return super.on(event, listener);
+  }
+
+  emit(event: string | symbol, ...args: any[]): boolean {
+    return super.emit(event, ...args);
+  }
+
+  removeAllListeners(event?: string | symbol): this {
+    return super.removeAllListeners(event);
+  }
+}
 
 const defaultConfig: IDeppackConfig = {
   maxDepth: 5,
@@ -30,7 +46,8 @@ const defaultConfig: IDeppackConfig = {
   cacheTokenCounts: true,
 };
 
-export class ConfigManager extends EventEmitter implements IConfigManager {
+export class ConfigManager extends BaseService implements IConfigManager {
+  private eventEmitter: EventEmitterBase;
   private config: IDeppackConfig;
   private readonly configPath: string;
   private readonly projectRoot: string;
@@ -43,7 +60,6 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
     validationErrors: 0,
     lastUpdate: undefined,
   };
-  private isInitialized: boolean = false;
 
   constructor(
     projectRoot: string,
@@ -51,6 +67,7 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
     options: IConfigManagerOptions = {}
   ) {
     super();
+    this.eventEmitter = new EventEmitterBase();
 
     if (!projectRoot || !this.deps.fileSystem.exists(projectRoot)) {
       throw new ConfigurationError(
@@ -62,14 +79,64 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
     this.projectRoot = projectRoot;
     this.debug = options.debug || false;
     this.watch = options.watch || false;
-    this.configPath = options.configPath ||
+    this.configPath =
+      options.configPath ||
       this.deps.fileSystem.joinPath(projectRoot, "deppack.config.json");
 
     this.config = { ...defaultConfig };
     this.initializeMetrics();
-    
+
     this.logDebug(`ConfigManager created with root: ${projectRoot}`);
     this.logDebug(`Using config path: ${this.configPath}`);
+  }
+
+  // Delegate EventEmitter methods
+  public on(event: string | symbol, listener: (...args: any[]) => void): this {
+    this.eventEmitter.on(event, listener);
+    return this;
+  }
+
+  public emit(event: string | symbol, ...args: any[]): boolean {
+    return this.eventEmitter.emit(event, ...args);
+  }
+
+  public removeAllListeners(event?: string | symbol): this {
+    this.eventEmitter.removeAllListeners(event);
+    return this;
+  }
+
+  public override async initialize(): Promise<void> {
+    this.logDebug("Initializing ConfigManager");
+
+    try {
+      await super.initialize();
+      await this.loadConfig();
+
+      if (this.watch) {
+        this.startWatching();
+      }
+
+      this.logDebug("ConfigManager initialization complete");
+    } catch (error) {
+      throw new ConfigurationError(
+        `Failed to initialize ConfigManager: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        this.configPath
+      );
+    }
+  }
+
+  public override cleanup(): void {
+    this.logDebug("Cleaning up ConfigManager");
+
+    if (this.watchHandler) {
+      clearInterval(this.watchHandler);
+      this.watchHandler = undefined;
+    }
+
+    this.removeAllListeners();
+    super.cleanup();
   }
 
   private initializeMetrics(): void {
@@ -87,43 +154,9 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
     }
   }
 
-  public async initialize(): Promise<void> {
-    this.logDebug("Initializing ConfigManager");
-
-    try {
-      if (this.isInitialized) {
-        this.logDebug("ConfigManager already initialized");
-        return;
-      }
-
-      await this.loadConfig();
-
-      if (this.watch) {
-        this.startWatching();
-      }
-
-      this.isInitialized = true;
-      this.logDebug("ConfigManager initialization complete");
-    } catch (error) {
-      throw new ConfigurationError(
-        `Failed to initialize ConfigManager: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        this.configPath
-      );
-    }
-  }
-
-  public cleanup(): void {
-    this.logDebug("Cleaning up ConfigManager");
-
-    if (this.watchHandler) {
-      clearInterval(this.watchHandler);
-      this.watchHandler = undefined;
-    }
-
-    this.removeAllListeners();
-    this.isInitialized = false;
+  public getConfig(): IDeppackConfig {
+    this.checkInitialized();
+    return { ...this.config };
   }
 
   private startWatching(): void {
@@ -151,7 +184,7 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
   }
 
   private async loadConfig(options: IConfigLoadOptions = {}): Promise<void> {
-    this.logDebug(`Loading configuration${options.isWatch ? ' (watch)' : ''}`);
+    this.logDebug(`Loading configuration${options.isWatch ? " (watch)" : ""}`);
 
     let fileConfig: Partial<IDeppackConfig> = {};
 
@@ -190,9 +223,8 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
         oldConfig,
         newConfig,
         timestamp: Date.now(),
-        isWatch: options.isWatch
+        isWatch: options.isWatch,
       } as IConfigChangeEvent);
-
     } catch (error) {
       this.metrics.validationErrors++;
       throw new ConfigurationError(
@@ -204,16 +236,11 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
     }
   }
 
-  public getConfig(): IDeppackConfig {
-    if (!this.isInitialized) {
-      throw new ConfigurationError("ConfigManager not initialized", this.configPath);
-    }
-    return { ...this.config };
-  }
-
-  public async updateConfig(updates: Partial<IDeppackConfig>): Promise<IDeppackConfig> {
+  public async updateConfig(
+    updates: Partial<IDeppackConfig>
+  ): Promise<IDeppackConfig> {
     this.logDebug("Updating configuration");
-    
+
     try {
       const newConfig = {
         ...this.config,
@@ -324,7 +351,7 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
       "gpt-4": 8192,
       "gpt-4o": 128000,
       "gpt-4o-mini": 128000,
-      "o1": 128000,
+      o1: 128000,
       "o1-mini": 128000,
       "o3-mini": 200000,
     };
@@ -352,7 +379,9 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
     return null;
   }
 
-  public validateConfig(config: Partial<IDeppackConfig>): IConfigValidationResult {
+  public validateConfig(
+    config: Partial<IDeppackConfig>
+  ): IConfigValidationResult {
     this.logDebug("Validating configuration");
 
     const result: IConfigValidationResult = {
@@ -364,7 +393,7 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
     try {
       // Validate with deps.validator
       this.deps.validator.validate(config, "config", {
-        requiredFields: ["tokenizer", "outputFormat"]
+        requiredFields: ["tokenizer", "outputFormat"],
       });
 
       // Validate tokenizer configuration
@@ -486,3 +515,5 @@ export class ConfigManager extends EventEmitter implements IConfigManager {
     }
   }
 }
+
+Object.assign(ConfigManager.prototype, EventEmitter.prototype);

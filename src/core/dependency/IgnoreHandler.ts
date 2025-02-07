@@ -10,18 +10,19 @@ import {
   IPatternValidationResult,
   ILoadPatternsOptions
 } from "./interfaces/IIgnoreHandler";
+import { BaseService } from "@/types/services"
 
-export class IgnoreHandler implements IIgnoreHandler, IIgnorePatternValidator {
+export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnorePatternValidator {
   private patterns: string[] = [];
   private readonly projectRoot: string;
   private readonly debug: boolean;
-  private isInitialized: boolean = false;
 
   constructor(
     projectRoot: string,
     private readonly deps: IIgnoreHandlerDeps,
     options: IIgnoreHandlerOptions = {}
   ) {
+    super();
     if (!projectRoot || typeof projectRoot !== "string") {
       throw new ValidationError("Invalid project root", { projectRoot });
     }
@@ -36,21 +37,16 @@ export class IgnoreHandler implements IIgnoreHandler, IIgnorePatternValidator {
     }
   }
 
-  public async initialize(): Promise<void> {
+  public override async initialize(): Promise<void> {
+    await super.initialize();
     this.logDebug('Initializing IgnoreHandler');
 
     try {
-      if (this.isInitialized) {
-        this.logDebug('IgnoreHandler already initialized');
-        return;
-      }
-
       if (!this.deps.fileSystem.exists(this.projectRoot)) {
         throw new ValidationError("Project root does not exist", { projectRoot: this.projectRoot });
       }
 
       await this.loadIgnorePatterns();
-      this.isInitialized = true;
       this.logDebug('IgnoreHandler initialization complete');
     } catch (error) {
       throw new ValidationError(
@@ -59,10 +55,10 @@ export class IgnoreHandler implements IIgnoreHandler, IIgnorePatternValidator {
     }
   }
 
-  public cleanup(): void {
+  public override cleanup(): void {
     this.logDebug('Cleaning up IgnoreHandler');
     this.patterns = [];
-    this.isInitialized = false;
+    super.cleanup();
   }
 
   private logDebug(message: string): void {

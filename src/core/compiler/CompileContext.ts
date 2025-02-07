@@ -20,14 +20,13 @@ import { IConfigManager } from "@/config";
 import { IDependencyMap } from "dependency";
 
 export class CompileContext extends EventEmitter implements ICompileContext {
+  public isInitialized: boolean = false;
   private readonly debug: boolean;
   private readonly batchSize: number;
   private readonly includeMetrics: boolean;
   private startTime: number;
-  private isInitialized: boolean = false;
   private currentPhase?: CompilePhase;
 
-  // Add the required properties from ICompileContext
   public readonly options: ICompileOptions;
   public readonly stats: {
     startTime: string;
@@ -62,7 +61,6 @@ export class CompileContext extends EventEmitter implements ICompileContext {
     this.includeMetrics = options.includeMetrics || false;
     this.startTime = Date.now();
 
-    // Initialize the required properties
     this.options = {
       entryFiles: [],
       outputFile: "",
@@ -83,14 +81,14 @@ export class CompileContext extends EventEmitter implements ICompileContext {
   }
 
   public async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      this.logDebug("CompileContext already initialized");
+      return;
+    }
+
     this.logDebug("Initializing CompileContext");
 
     try {
-      if (this.isInitialized) {
-        this.logDebug("CompileContext already initialized");
-        return;
-      }
-
       // Initialize all required services
       await Promise.all([
         this.deps.ignoreHandler.initialize?.(),
@@ -390,11 +388,21 @@ export class CompileContext extends EventEmitter implements ICompileContext {
     options: ICompileFileOptions = {}
   ): Promise<IFileWithContent[]> {
     this.logDebug(`Loading contents for ${files.length} files`);
-
+  
     const result = await Promise.all(
       files.map(async (file) => {
         try {
           const content = await this.deps.fileSystem.readFile(file.absolute);
+          
+          // Add validation for empty content
+          if (!content || content.trim() === '') {
+            this.deps.logger.warn(`Empty file content for: ${file.path}`);
+            return {
+              ...file,
+              content: ' ' // Provide a space instead of empty string
+            };
+          }
+  
           return {
             ...file,
             content,
@@ -410,7 +418,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
         }
       })
     );
-
+  
     this.logDebug(`Loaded contents for ${result.length} files`);
     return result;
   }
@@ -556,6 +564,3 @@ export class CompileContext extends EventEmitter implements ICompileContext {
     ].join("\n");
   }
 }
-
-// Export CompileContext as DefaultCompileContext for backward compatibility
-export { CompileContext as DefaultCompileContext };

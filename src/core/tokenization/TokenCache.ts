@@ -9,10 +9,11 @@ import {
   ITokenCacheDeps,
   ITokenCacheOptions 
 } from './interfaces/ITokenCache';
+import { BaseService } from "@/types/services"
 
 export type CacheOperation = 'read' | 'write' | 'delete' | 'clear' | 'expire';
 
-export class TokenCache implements ITokenCache {
+export class TokenCache extends BaseService implements ITokenCache {
   private readonly cachePath: string;
   private readonly projectRoot: string;
   private cache: Record<string, ICacheEntry> = {};
@@ -33,16 +34,19 @@ export class TokenCache implements ITokenCache {
     private readonly deps: ITokenCacheDeps,
     options: ITokenCacheOptions = {}
   ) {
+    super();
     this.projectRoot = projectRoot;
     this.maxCacheAge = options.maxCacheAge || 7 * 24 * 60 * 60 * 1000; // 7 days default
     this.debug = options.debug || false;
     this.cachePath = this.deps.fileSystem.joinPath(projectRoot, ".deppack", "token-cache.json");
   }
 
-  public async initialize(): Promise<void> {
+  public override async initialize(): Promise<void> {
     this.logDebug('Initializing TokenCache');
     
     try {
+      await super.initialize();
+      
       if (!this.deps.fileSystem.exists(this.projectRoot)) {
         throw new ValidationError("Project root does not exist", { projectRoot: this.projectRoot });
       }
@@ -75,6 +79,7 @@ export class TokenCache implements ITokenCache {
   public cleanup(): void {
     this.logDebug('Cleaning up TokenCache');
     this.saveCache();
+    super.cleanup();
   }
 
   private logDebug(message: string): void {

@@ -1,9 +1,12 @@
-import { ICompileOptions, ICompileResult } from "./compiler";
-import { IDeppackConfig, IConfigValidationResult } from "./config";
-import { IFileWithContent } from "./files";
-import { ISummaryStats } from "./stats";
+// src/types/services.ts
+
+import { ICompileOptions, ICompileResult } from "compiler";
+import { IDeppackConfig, IConfigValidationResult } from "config";
+import { IFileWithContent } from "files";
+import { ISummaryStats } from "stats";
 
 export interface IService {
+  isInitialized: boolean;
   initialize(): Promise<void>;
   cleanup(): void;
 }
@@ -42,4 +45,24 @@ export interface ICacheService extends IService {
   delete(key: string): Promise<void>;
   clear(): Promise<void>;
   has(key: string): Promise<boolean>;
+}
+
+// src/types/services.ts
+
+export abstract class BaseService implements IService {
+  isInitialized: boolean = false;
+
+  public async initialize(): Promise<void> {
+    this.isInitialized = true;
+  }
+
+  public cleanup(): void {
+    this.isInitialized = false;
+  }
+
+  protected checkInitialized(): void {
+    if (!this.isInitialized) {
+      throw new Error(`${this.constructor.name} not initialized`);
+    }
+  }
 }

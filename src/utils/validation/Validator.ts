@@ -9,24 +9,28 @@ import {
   ITypeValidator,
   IValidatorOptions
 } from './interfaces/IValidator';
+import { BaseService } from '@/types/services';
 
 
-export class Validator implements IValidator, ITypeValidator {
+export class Validator extends BaseService implements IValidator, ITypeValidator {
   private readonly debug: boolean;
 
   constructor(
     private readonly deps: IValidatorDeps,
     options: IValidatorOptions = {}
   ) {
+    super();
     this.debug = options.debug || false;
   }
 
-  public async initialize(): Promise<void> {
+  public override async initialize(): Promise<void> {
+    await super.initialize();
     this.logDebug('Validator service initialized');
   }
 
-  public cleanup(): void {
+  public override cleanup(): void {
     this.logDebug('Validator service cleanup');
+    super.cleanup();
   }
 
   private logDebug(message: string): void {
@@ -46,6 +50,7 @@ export class Validator implements IValidator, ITypeValidator {
     fieldName: string,
     options: IValidationOptions = {}
   ): IValidationResult {
+    this.checkInitialized();
     this.logDebug(`Validating ${fieldName}`);
     
     const result: IValidationResult = {

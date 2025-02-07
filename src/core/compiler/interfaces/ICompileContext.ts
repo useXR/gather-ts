@@ -1,15 +1,13 @@
 // src/core/compiler/interfaces/ICompileContext.ts
 
-import { EventEmitter } from 'events';
-import { ICompileMetrics, ICompileOptions, ICompileResult } from '@/types/compiler';
 import { IService } from '@/types/services';
-import { IConfigManager } from '@/config/interfaces/IConfigManager';
-import { IIgnoreHandler } from '@/core/dependency/interfaces/IIgnoreHandler';
-import { ITokenCounter } from '@/core/tokenization/interfaces/ITokenCounter';
+import { ICompileMetrics, ICompileOptions, ICompileResult } from '@/types/compiler';
+import { EventEmitter } from 'events';
+import { IConfigManager } from '@/config';
+import { IIgnoreHandler, IDependencyAnalyzer } from '@/core/dependency';
+import { ITokenCounter } from '@/core/tokenization';
 import { IErrorHandler } from '@/errors/interfaces/IErrorHandler';
-import { IDependencyAnalyzer } from '@/core/dependency/interfaces/IDependencyAnalyzer';
-import { ILogger } from '@/utils/logging/interfaces/ILogger';
-import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
+import { ILogger, IFileSystem } from '@/utils';
 
 export type CompilePhase = 
   | 'initialization'
@@ -79,22 +77,18 @@ export interface ICompileContextHooks {
   afterPhase?: (phase: string, result: ICompilePhaseResult) => Promise<void>;
 }
 
-export interface ICompileContext extends IService, EventEmitter {
+export interface ICompileContext extends IService {
+  // Add Service interface methods
+  isInitialized: boolean;
+  initialize(): Promise<void>;
+  cleanup(): void;
+
+  // Add existing compile methods
   compile(options: ICompileOptions): Promise<ICompileResult>;
   getMetrics(): ICompileMetrics;
-  
-  on<K extends keyof ICompileContextEvents>(
-    event: K,
-    listener: (data: ICompileContextEvents[K]) => void
-  ): this;
-  
-  off<K extends keyof ICompileContextEvents>(
-    event: K,
-    listener: (data: ICompileContextEvents[K]) => void
-  ): this;
-  
-  emit<K extends keyof ICompileContextEvents>(
-    event: K,
-    data: ICompileContextEvents[K]
-  ): boolean;
+
+  // Add event emitter methods
+  on(event: 'progress', listener: (progress: ICompileProgress) => void): this;
+  off(event: 'progress', listener: (progress: ICompileProgress) => void): this;
+  emit(event: 'progress', progress: ICompileProgress): boolean;
 }

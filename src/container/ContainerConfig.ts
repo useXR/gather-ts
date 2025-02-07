@@ -11,7 +11,6 @@ import { FileSystem } from "../utils/filesystem/FileSystem";
 import { DependencyAnalyzer } from "../core/dependency/DependencyAnalyzer";
 import { Logger } from "../utils/logging/Logger";
 import { Validator } from "../utils/validation/Validator";
-import { DefaultCompileContext } from "../core/compiler/CompileContext";
 import { ArgumentParser } from "../core/compiler/ArgumentParser";
 import { IContainerOptions, IContainer } from "./interfaces/IContainer";
 import { ILogger } from "@/utils/logging/interfaces/ILogger";
@@ -21,28 +20,21 @@ import { IConfigManager } from "@/config/interfaces/IConfigManager";
 import { ITokenCache } from "@/core/tokenization/interfaces/ITokenCache";
 import { IIgnoreHandler } from "@/core/dependency/interfaces/IIgnoreHandler";
 import { IValidator } from "@/utils/validation/interfaces/IValidator";
+import { ITokenCounter } from "@/core/tokenization/interfaces/ITokenCounter";
+import { IDependencyAnalyzer } from "@/core/dependency/interfaces/IDependencyAnalyzer";
+import { IErrorHandler } from "@/errors/interfaces/IErrorHandler";
+import { IArgumentParser } from "@/core/compiler/interfaces/IArgumentParser";
+import { ICompileContext } from "@/core/compiler/interfaces/ICompileContext";
+import { CompileContext } from "@/core/compiler";
 
-// Helper function to handle container resolution with error checking
-function resolveService<T>(
-  container: IContainer,
-  token: string,
-  name: string
-): T {
-  const service = container.resolve<T>(token);
-  if (!service) {
-    throw new Error(`Failed to resolve ${name} service`);
-  }
-  return service;
-}
-
-export async function configureContainer(projectRoot: string, options: IContainerOptions = {}): Promise<IContainer> {
+export async function configureContainer(
+  projectRoot: string,
+  options: IContainerOptions = {}
+): Promise<IContainer> {
   const container = Container.getInstance(options.debug);
 
   try {
-    // Initialize the container first
-    await container.initialize();
-
-    // First, register the logger as it's needed by most other services
+    // First, create and initialize the logger
     container.registerFactory(ServiceTokens.LOGGER, () => {
       return new Logger(
         {
@@ -57,32 +49,36 @@ export async function configureContainer(projectRoot: string, options: IContaine
       );
     });
 
-    // Get logger instance and initialize it
-    const logger = resolveService<ILogger>(container, ServiceTokens.LOGGER, 'Logger');
+    const logger = container.resolve<ILogger>(ServiceTokens.LOGGER);
     await logger.initialize();
     logger.debug('Configuring container services...');
 
-    // Register FileSystem with logger dependency
+    // Register FileSystem
     container.registerFactory(ServiceTokens.FILE_SYSTEM, () => {
       return new FileSystem({ logger }, { debug: options.debug });
     });
 
-    // Get FileSystem instance for other services
-    const fileSystem = resolveService<IFileSystem>(container, ServiceTokens.FILE_SYSTEM, 'FileSystem');
+    const fileSystem = container.resolve<IFileSystem>(ServiceTokens.FILE_SYSTEM);
+    await fileSystem.initialize();
 
     // Register Validator
     container.registerFactory(ServiceTokens.VALIDATOR, () => {
       return new Validator({ logger }, { debug: options.debug });
     });
 
+    const validator = container.resolve<IValidator>(ServiceTokens.VALIDATOR);
+    await validator.initialize();
+
     // Register ErrorUtils
     container.registerFactory(ServiceTokens.ERROR_UTILS, () => {
       return new ErrorUtils({ logger }, { debug: options.debug });
     });
 
+    const errorUtils = container.resolve<IErrorUtils>(ServiceTokens.ERROR_UTILS);
+    await errorUtils.initialize();
+
     // Register ErrorHandler
     container.registerFactory(ServiceTokens.ERROR_HANDLER, () => {
-      const errorUtils = resolveService<IErrorUtils>(container, ServiceTokens.ERROR_UTILS, 'ErrorUtils');
       return new ErrorHandler(
         { 
           fileSystem,
@@ -98,9 +94,11 @@ export async function configureContainer(projectRoot: string, options: IContaine
       );
     });
 
+    const errorHandler = container.resolve<IErrorHandler>(ServiceTokens.ERROR_HANDLER);
+    await errorHandler.initialize();
+
     // Register ConfigManager
     container.registerFactory(ServiceTokens.CONFIG_MANAGER, () => {
-      const validator = resolveService<IValidator>(container, ServiceTokens.VALIDATOR, 'Validator');
       return new ConfigManager(
         projectRoot,
         { 
@@ -111,6 +109,9 @@ export async function configureContainer(projectRoot: string, options: IContaine
         { debug: options.debug }
       );
     });
+
+    const configManager = container.resolve<IConfigManager>(ServiceTokens.CONFIG_MANAGER);
+    await configManager.initialize();
 
     // Register TokenCache
     container.registerFactory(ServiceTokens.TOKEN_CACHE, () => {
@@ -127,6 +128,9 @@ export async function configureContainer(projectRoot: string, options: IContaine
       );
     });
 
+    const tokenCache = container.resolve<ITokenCache>(ServiceTokens.TOKEN_CACHE);
+    await tokenCache.initialize();
+
     // Register IgnoreHandler
     container.registerFactory(ServiceTokens.IGNORE_HANDLER, () => {
       return new IgnoreHandler(
@@ -139,11 +143,11 @@ export async function configureContainer(projectRoot: string, options: IContaine
       );
     });
 
+    const ignoreHandler = container.resolve<IIgnoreHandler>(ServiceTokens.IGNORE_HANDLER);
+    await ignoreHandler.initialize();
+
     // Register TokenCounter
     container.registerFactory(ServiceTokens.TOKEN_COUNTER, () => {
-      const configManager = resolveService<IConfigManager>(container, ServiceTokens.CONFIG_MANAGER, 'ConfigManager');
-      const tokenCache = resolveService<ITokenCache>(container, ServiceTokens.TOKEN_CACHE, 'TokenCache');
-      
       return new TokenCounter(
         {
           configManager,
@@ -158,10 +162,11 @@ export async function configureContainer(projectRoot: string, options: IContaine
       );
     });
 
+    const tokenCounter = container.resolve<ITokenCounter>(ServiceTokens.TOKEN_COUNTER);
+    await tokenCounter.initialize();
+
     // Register DependencyAnalyzer
     container.registerFactory(ServiceTokens.DEPENDENCY_ANALYZER, () => {
-      const ignoreHandler = resolveService<IIgnoreHandler>(container, ServiceTokens.IGNORE_HANDLER, 'IgnoreHandler');
-      
       return new DependencyAnalyzer(
         {
           fileSystem,
@@ -176,9 +181,11 @@ export async function configureContainer(projectRoot: string, options: IContaine
       );
     });
 
+    const dependencyAnalyzer = container.resolve<IDependencyAnalyzer>(ServiceTokens.DEPENDENCY_ANALYZER);
+    await dependencyAnalyzer.initialize();
+
     // Register ArgumentParser
     container.registerFactory(ServiceTokens.ARGUMENT_PARSER, () => {
-      const validator = resolveService<IValidator>(container, ServiceTokens.VALIDATOR, 'Validator');
       return new ArgumentParser(
         {
           logger,
@@ -189,15 +196,18 @@ export async function configureContainer(projectRoot: string, options: IContaine
       );
     });
 
+    const argumentParser = container.resolve<IArgumentParser>(ServiceTokens.ARGUMENT_PARSER);
+    await argumentParser.initialize();
+
     // Register Compiler
     container.registerFactory(ServiceTokens.COMPILER, () => {
-      return new DefaultCompileContext(
+      return new CompileContext(
         {
-          configManager: resolveService<IConfigManager>(container, ServiceTokens.CONFIG_MANAGER, 'ConfigManager'),
-          ignoreHandler: resolveService<IIgnoreHandler>(container, ServiceTokens.IGNORE_HANDLER, 'IgnoreHandler'),
-          tokenCounter: resolveService(container, ServiceTokens.TOKEN_COUNTER, 'TokenCounter'),
-          errorHandler: resolveService(container, ServiceTokens.ERROR_HANDLER, 'ErrorHandler'),
-          dependencyAnalyzer: resolveService(container, ServiceTokens.DEPENDENCY_ANALYZER, 'DependencyAnalyzer'),
+          configManager,
+          ignoreHandler,
+          tokenCounter,
+          errorHandler,
+          dependencyAnalyzer,
           logger,
           fileSystem
         },
@@ -208,6 +218,9 @@ export async function configureContainer(projectRoot: string, options: IContaine
       );
     });
 
+    const compiler = container.resolve<ICompileContext>(ServiceTokens.COMPILER);
+    await compiler.initialize();
+
     logger.debug('Container configuration complete');
     return container;
   } catch (error) {
@@ -216,15 +229,10 @@ export async function configureContainer(projectRoot: string, options: IContaine
   }
 }
 
-
 export async function initializeContainer(
   container: IContainer
 ): Promise<void> {
-  const logger = resolveService<ILogger>(
-    container,
-    ServiceTokens.LOGGER,
-    "Logger"
-  );
+  const logger = container.resolve<ILogger>(ServiceTokens.LOGGER);
 
   try {
     logger.debug("Starting container initialization");
@@ -239,7 +247,7 @@ export async function initializeContainer(
 
 export function cleanupContainer(container: IContainer): void {
   try {
-    const logger = resolveService<ILogger>(container, ServiceTokens.LOGGER, 'Logger');
+    const logger = container.resolve<ILogger>(ServiceTokens.LOGGER);
     logger.debug('Starting container cleanup');
     container.cleanup();
     logger.debug('Container cleanup complete');

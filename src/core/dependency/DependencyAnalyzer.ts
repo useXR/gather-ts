@@ -15,17 +15,18 @@ import {
   IDependencyAnalyzerEvents,
 } from "./interfaces/IDependencyAnalyzer";
 import { IDependencyMap } from "dependency";
+import { BaseService } from "@/types/services";
 
 export class DependencyAnalyzer
   extends EventEmitter
   implements IDependencyAnalyzer
 {
+  isInitialized: boolean = false;
   private readonly debug: boolean;
   private readonly webpackConfigPath?: string;
   private readonly tsConfigPath: string;
   private readonly fileExtensions: string[];
   private readonly maxConcurrency: number;
-  private isInitialized: boolean = false;
   private originalCwd: string;
 
   constructor(
@@ -43,24 +44,14 @@ export class DependencyAnalyzer
 
   private logDebug(message: string): void {
     if (this.debug) {
-      this.deps.logger.debug(message);
+      this.deps.logger.debug(`[DependencyAnalyzer] ${message}`);
     }
   }
 
-  private handleError(operation: string, error: unknown, context?: Record<string, unknown>): never {
-    const message = error instanceof Error ? error.message : String(error);
-    const analysisError = new DependencyAnalysisError(
-      `Dependency analysis ${operation} failed: ${message}`,
-      context?.entryPoint as string,
-      context?.dependencies as string[]
-    );
-    this.deps.logger.error(analysisError.message);
-    this.emit('analysis:error', {
-      error: analysisError,
-      phase: operation,
-      timestamp: Date.now()
-    });
-    throw analysisError;
+  private checkInitialized(): void {
+    if (!this.isInitialized) {
+      throw new Error("DependencyAnalyzer not initialized");
+    }
   }
 
   public async initialize(): Promise<void> {
@@ -71,9 +62,6 @@ export class DependencyAnalyzer
         this.logDebug("DependencyAnalyzer already initialized");
         return;
       }
-
-      // Store original working directory
-      this.originalCwd = process.cwd();
 
       // Verify configuration files exist
       if (
@@ -91,6 +79,9 @@ export class DependencyAnalyzer
         );
       }
 
+      // Store original working directory
+      this.originalCwd = process.cwd();
+
       this.isInitialized = true;
       this.logDebug("DependencyAnalyzer initialization complete");
     } catch (error) {
@@ -103,6 +94,26 @@ export class DependencyAnalyzer
     this.restoreWorkingDirectory();
     this.removeAllListeners();
     this.isInitialized = false;
+  }
+
+  private handleError(
+    operation: string,
+    error: unknown,
+    context?: Record<string, unknown>
+  ): never {
+    const message = error instanceof Error ? error.message : String(error);
+    const analysisError = new DependencyAnalysisError(
+      `Dependency analysis ${operation} failed: ${message}`,
+      context?.entryPoint as string,
+      context?.dependencies as string[]
+    );
+    this.deps.logger.error(analysisError.message);
+    this.emit("analysis:error", {
+      error: analysisError,
+      phase: operation,
+      timestamp: Date.now(),
+    });
+    throw analysisError;
   }
 
   private changeWorkingDirectory(dir: string): void {
@@ -221,6 +232,9 @@ export class DependencyAnalyzer
 
     const startTime = Date.now();
     const files = Array.isArray(entryFiles) ? entryFiles : [entryFiles];
+    
+    this.logDebug(`Project root: ${projectRoot}`);
+    this.logDebug(`Entry files: ${files.join(', ')}`);
 
     if (options.useWorkingDir) {
       this.changeWorkingDirectory(projectRoot);
@@ -232,11 +246,29 @@ export class DependencyAnalyzer
         timestamp: startTime,
       });
 
-      const relativeFiles = files.map((file) =>
+      // Convert entry files to absolute paths if they aren't already
+      const absoluteFiles = files.map((file) =>
+        this.deps.fileSystem.isAbsolute(file)
+          ? file
+          : this.deps.fileSystem.resolvePath(projectRoot, file)
+      );
+
+      // Get relative paths for madge
+      const relativeFiles = absoluteFiles.map((file) =>
         this.deps.fileSystem.getRelativePath(projectRoot, file)
       );
 
       this.logDebug(`Analyzing dependencies for: ${relativeFiles.join(", ")}`);
+      // Add the debug statements here
+      this.logDebug(`Project root: ${projectRoot}`);
+      this.logDebug(`Analyzing dependencies for: ${relativeFiles.join(", ")}`);
+      this.logDebug(
+        `Using TSConfig: ${this.deps.fileSystem.joinPath(
+          projectRoot,
+          this.tsConfigPath
+        )}`
+      );
+      this.logDebug(`File extensions: ${this.fileExtensions.join(", ")}`);
 
       // Check cache if enabled
       if (!options.skipCache && this.deps.cache) {
@@ -245,7 +277,7 @@ export class DependencyAnalyzer
 
         if (cachedDeps) {
           const result = {
-            entryFiles: files,
+            entryFiles: absoluteFiles,
             dependencies: cachedDeps,
             circularDependencies: await this.getCircularDependencies(
               cachedDeps
@@ -284,9 +316,14 @@ export class DependencyAnalyzer
           tsx: { mixedImports: true },
         },
         followSymlinks: options.followSymlinks || false,
+        cwd: projectRoot, // Add this line
         ...options.madgeConfig,
       };
 
+      // Before calling madge, ensure we're in the right directory
+      this.changeWorkingDirectory(projectRoot);
+
+      // Process each entry file
       let processedFiles = 0;
       const dependencyMaps = await Promise.all(
         relativeFiles.map(async (entryFile) => {
@@ -298,8 +335,15 @@ export class DependencyAnalyzer
             entryFile
           );
 
-          const madgeResult = await madge(entryFile, madgeConfig);
-          return await madgeResult.obj();
+          try {
+            const madgeResult = await madge(entryFile, madgeConfig);
+            return await madgeResult.obj();
+          } catch (error) {
+            this.deps.logger.error(
+              `Failed to analyze dependencies for ${entryFile}: ${error}`
+            );
+            throw error;
+          }
         })
       );
 
@@ -343,7 +387,7 @@ export class DependencyAnalyzer
       );
 
       const result: IDependencyAnalysisResult = {
-        entryFiles: files,
+        entryFiles: absoluteFiles,
         dependencies,
         circularDependencies,
         totalFiles,
@@ -378,7 +422,7 @@ export class DependencyAnalyzer
     }
     // This return will never be reached because handleError always throws,
     // but TypeScript needs it to understand all paths return something
-    return Promise.reject(new Error('Unreachable'));
+    return Promise.reject(new Error("Unreachable"));
   }
 
   public async gatherDependencies(
@@ -431,8 +475,23 @@ export class DependencyAnalyzer
     }
 
     const result = Array.from(visited);
+
     this.logDebug(`Gathered ${result.length} total dependencies`);
-    return result;
+
+    // Filter out empty files
+    const nonEmptyFiles = await Promise.all(
+      result.map(async (filePath) => {
+        try {
+          const content = await this.deps.fileSystem.readFile(filePath);
+          return content.trim() !== "" ? filePath : null;
+        } catch (error) {
+          this.deps.logger.warn(`Error reading file ${filePath}: ${error}`);
+          return null;
+        }
+      })
+    );
+
+    return nonEmptyFiles.filter((file): file is string => file !== null);
   }
 
   public async getCircularDependencies(

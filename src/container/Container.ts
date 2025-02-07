@@ -9,11 +9,12 @@ import {
   IServiceRegistration,
   IContainerEvents
 } from './interfaces/IContainer';
+import { IService } from '@/types/services';
 
 export class Container extends EventEmitter implements IContainer {
   private static instance: Container;
   private services: Map<string, IServiceRegistration> = new Map();
-  private isInitialized: boolean = false;
+  isInitialized: boolean = false;
   private readonly debug: boolean;
 
   private constructor(debug: boolean = false) {
@@ -45,13 +46,17 @@ export class Container extends EventEmitter implements IContainer {
 
       this.emit('initialization:start', { timestamp: Date.now() });
 
-      // Initialize all registered services that implement IService
-      const initPromises = Array.from(this.services.values())
-        .map(registration => registration.instance)
-        .filter(instance => instance && 'initialize' in instance)
-        .map(instance => (instance as any).initialize());
-
-      await Promise.all(initPromises);
+      for (const [token, registration] of this.services.entries()) {
+        const instance = registration.instance;
+        if (instance && 'initialize' in instance) {
+          try {
+            await instance.initialize();
+            this.logDebug(`Initialized service: ${token}`);
+          } catch (error) {
+            throw new Error(`Failed to initialize service ${token}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+      }
 
       this.isInitialized = true;
       this.emit('initialization:complete', { timestamp: Date.now() });
@@ -67,11 +72,17 @@ export class Container extends EventEmitter implements IContainer {
     try {
       this.emit('cleanup:start', { timestamp: Date.now() });
 
-      // Cleanup all registered services that implement IService
-      Array.from(this.services.values())
-        .map(registration => registration.instance)
-        .filter(instance => instance && 'cleanup' in instance)
-        .forEach(instance => (instance as any).cleanup());
+      for (const [token, registration] of this.services.entries()) {
+        const instance = registration.instance;
+        if (instance && 'cleanup' in instance) {
+          try {
+            instance.cleanup();
+            this.logDebug(`Cleaned up service: ${token}`);
+          } catch (error) {
+            this.logDebug(`Error cleaning up service ${token}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+      }
 
       this.services.clear();
       this.isInitialized = false;
@@ -88,7 +99,7 @@ export class Container extends EventEmitter implements IContainer {
     throw new ValidationError(`Container ${operation} failed: ${message}`);
   }
 
-  public register<T>(token: IServiceIdentifier<T>, instance: T): void {
+  public register<T extends IService>(token: IServiceIdentifier<T>, instance: T): void {
     this.logDebug(`Registering service: ${token}`);
     
     if (!token) {
@@ -112,7 +123,7 @@ export class Container extends EventEmitter implements IContainer {
     });
   }
 
-  public registerFactory<T>(token: IServiceIdentifier<T>, factory: IServiceFactory<T>): void {
+  public registerFactory<T extends IService>(token: IServiceIdentifier<T>, factory: IServiceFactory<T>): void {
     this.logDebug(`Registering factory: ${token}`);
     
     if (!token) {
@@ -126,7 +137,7 @@ export class Container extends EventEmitter implements IContainer {
     const tokenStr = token.toString();
     this.services.set(tokenStr, {
       token,
-      factory
+      factory,
     });
 
     this.emit('service:registered', {
@@ -135,8 +146,8 @@ export class Container extends EventEmitter implements IContainer {
     });
   }
 
-  public resolve<T>(token: IServiceIdentifier<T>): T {
-    if (!this.isInitialized) {
+  public resolve<T extends IService>(token: IServiceIdentifier<T>): T {
+    if (!this.isInitialized && !this.services.has(token.toString())) {
       throw new ValidationError('Container not initialized');
     }
 
@@ -151,7 +162,11 @@ export class Container extends EventEmitter implements IContainer {
 
     try {
       if (!registration.instance) {
-        registration.instance = registration.factory();
+        const instance = registration.factory();
+        if (instance instanceof Promise) {
+          throw new ValidationError('Async service factories are not supported');
+        }
+        registration.instance = instance;
       }
 
       this.emit('service:resolved', {
@@ -183,7 +198,6 @@ export class Container extends EventEmitter implements IContainer {
   }
 }
 
-// Service tokens for type safety
 export const ServiceTokens = {
   CONFIG_MANAGER: "ConfigManager",
   IGNORE_HANDLER: "IgnoreHandler",

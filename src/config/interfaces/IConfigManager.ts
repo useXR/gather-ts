@@ -1,5 +1,6 @@
 // src/config/interfaces/IConfigManager.ts
 
+import { EventEmitter } from 'events';
 import { IService } from '@/types/services';
 import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
 import { ILogger } from '@/utils/logging/interfaces/ILogger';
@@ -93,51 +94,26 @@ export interface IConfigMetrics {
  * Core ConfigManager interface
  */
 export interface IConfigManager extends IService {
-  initialize(): Promise<void>;
-  
-  /** Get current configuration */
+  // EventEmitter methods we need
+  on(event: string | symbol, listener: (...args: any[]) => void): this;
+  emit(event: string | symbol, ...args: any[]): boolean;
+  removeAllListeners(event?: string | symbol): this;
+
+  // Config-specific methods
   getConfig(): IDeppackConfig;
-
-  /** Update configuration */
   updateConfig(updates: Partial<IDeppackConfig>): Promise<IDeppackConfig>;
-
-  /** Save configuration to disk */
   saveConfig(): Promise<void>;
-
-  /** Reset configuration to defaults */
   reset(): void;
-
-  /** Get configuration metrics */
   getMetrics(): IConfigMetrics;
-
-  /** Subscribe to configuration changes */
   onConfigChange(callback: (event: IConfigChangeEvent) => void): void;
-
-  /** Get project root directory */
   getProjectRoot(): string;
-
-  /** Get tokenizer model */
   getTokenizerModel(): string;
-
-  /** Get maximum depth */
   getMaxDepth(): number | undefined;
-
-  /** Check if token counting is enabled */
   shouldShowTokenCount(): boolean;
-
-  /** Get number of top files to show */
   getTopFilesCount(): number;
-
-  /** Check if debug mode is enabled */
   isDebugEnabled(): boolean;
-
-  /** Get model token limit */
   getModelTokenLimit(): number;
-
-  /** Get token warning if applicable */
   getTokenWarning(totalTokens: number): string | null;
-
-  /** Validate configuration */
   validateConfig(config: Partial<IDeppackConfig>): IConfigValidationResult;
 }
 

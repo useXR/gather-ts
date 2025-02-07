@@ -1,24 +1,21 @@
 // src/cli.ts
 
-import './register';
-import { EventEmitter } from "events";
-import { ValidationError } from "@/errors";
-import {
-  ICLI,
-  ICLIDeps,
-  ICLIOptions,
-  ICLIResult,
-  ICLIMetrics,
-  ICLIEventMap,
-} from "./interfaces/cli";
-import { configureContainer } from "./container/ContainerConfig";
+import { ICompileContext } from "@/core/compiler";
+import EventEmitter from "events";
+import path from "path";
+import { IConfigManager } from "./config";
 import { ServiceTokens } from "./container/Container";
-import path from 'path';
+import { configureContainer } from "./container/ContainerConfig";
+import { IArgumentParser } from "./core/compiler";
+import { ValidationError } from "./errors";
+import { ICLI, ICLIMetrics, ICLIOptions, ICLIResult } from "./interfaces/cli";
+import "./register";
+import { ILogger, IFileSystem } from "./utils";
 
 export class CLI extends EventEmitter implements ICLI {
   private readonly debug: boolean;
   private readonly exitOnError: boolean;
-  private isInitialized: boolean = false;
+  isInitialized: boolean = false;
   private metrics: ICLIMetrics = {
     executionTime: 0,
     memoryUsage: 0,
@@ -28,7 +25,16 @@ export class CLI extends EventEmitter implements ICLI {
   };
   private startTime: number = Date.now();
 
-  constructor(private readonly deps: ICLIDeps, options: ICLIOptions = {}) {
+  constructor(
+    private readonly deps: {
+      logger: ILogger;
+      configManager: IConfigManager;
+      compiler: ICompileContext;
+      argumentParser: IArgumentParser;
+      fileSystem: IFileSystem;
+    },
+    options: ICLIOptions = {}
+  ) {
     super();
     this.debug = options.debug || false;
     this.exitOnError = options.exitOnError ?? true;
@@ -63,7 +69,7 @@ export class CLI extends EventEmitter implements ICLI {
   }
 
   public cleanup(): void {
-    this.logDebug('Cleaning up CLI');
+    this.logDebug("Cleaning up CLI");
     this.removeAllListeners();
     this.isInitialized = false;
   }
@@ -175,6 +181,17 @@ export class CLI extends EventEmitter implements ICLI {
       throw new ValidationError("CLI not initialized");
     }
 
+    const configManager = this.deps.configManager as IConfigManager;
+    const compiler = this.deps.compiler as ICompileContext;
+
+    // Check if required services are initialized
+    if (!configManager.isInitialized) {
+      await configManager.initialize();
+    }
+    if (!compiler.isInitialized) {
+      await compiler.initialize();
+    }
+
     this.logDebug("Starting CLI execution");
 
     try {
@@ -197,6 +214,9 @@ export class CLI extends EventEmitter implements ICLI {
       if (compileOptions.init) {
         return await this.generateDefaultConfig(projectRoot);
       }
+
+      // Initialize compiler before using it
+      await this.deps.compiler.initialize();
 
       // Process required files if specified
       if (compileOptions.requiredFiles?.length) {
@@ -298,40 +318,82 @@ export class CLI extends EventEmitter implements ICLI {
         metrics: this.metrics,
       };
     }
-  }  
+  }
 }
 
-// Main entry point
-// Main entry point
 async function main() {
   let cli: CLI | undefined;
   let container;
 
+  const debug = process.argv.includes("--debug");
+
+  // Parse root directory from command line args first
+  const rootIndex = process.argv.indexOf("--root");
+  const projectRoot =
+    rootIndex > -1 ? process.argv[rootIndex + 1] : process.cwd();
+
   try {
-    container = await configureContainer(process.cwd(), {
-      debug: process.argv.includes('--debug'),
+    container = await configureContainer(projectRoot, {
+      debug,
       maxCacheAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      fileExtensions: ['ts', 'tsx', 'js', 'jsx']
+      fileExtensions: ["ts", "tsx", "js", "jsx"],
     });
 
     if (!container) {
-      throw new Error('Failed to configure container');
+      throw new Error("Failed to configure container");
     }
 
-    cli = new CLI({
-      logger: container.resolve(ServiceTokens.LOGGER),
-      configManager: container.resolve(ServiceTokens.CONFIG_MANAGER),
-      compiler: container.resolve(ServiceTokens.COMPILER),
-      argumentParser: container.resolve(ServiceTokens.ARGUMENT_PARSER),
-      fileSystem: container.resolve(ServiceTokens.FILE_SYSTEM)
-    }, {
-      debug: process.argv.includes('--debug'),
-      exitOnError: true
-    });
+    // Initialize container first
+    await container.initialize();
+
+    // Resolve and type cast services properly
+    const logger = container.resolve<ILogger>(ServiceTokens.LOGGER);
+    const configManager = container.resolve<IConfigManager>(
+      ServiceTokens.CONFIG_MANAGER
+    );
+    const compiler = container.resolve<ICompileContext>(ServiceTokens.COMPILER);
+    const argumentParser = container.resolve<IArgumentParser>(
+      ServiceTokens.ARGUMENT_PARSER
+    );
+    const fileSystem = container.resolve<IFileSystem>(
+      ServiceTokens.FILE_SYSTEM
+    );
+
+    if (debug) {
+      logger.enableDebug();
+      logger.debug("Debug mode enabled");
+      logger.debug(`Current working directory: ${process.cwd()}`);
+      logger.debug(`Command line arguments: ${process.argv.join(" ")}`);
+    }
+
+    // Initialize services sequentially
+    await configManager.initialize();
+    await compiler.initialize();
+    await argumentParser.initialize();
+    await fileSystem.initialize();
+
+    cli = new CLI(
+      {
+        logger,
+        configManager,
+        compiler,
+        argumentParser,
+        fileSystem,
+      },
+      {
+        debug,
+        exitOnError: true,
+      }
+    );
 
     await cli.initialize();
+
+    if (debug) {
+      logger.debug("CLI initialized");
+    }
+
     const result = await cli.run();
-    
+
     if (!result.success) {
       process.exit(result.exitCode);
     }

@@ -16,7 +16,7 @@ export class DependencyCache implements IDependencyCache {
   private readonly debug: boolean;
   private readonly timeout: number;
   private stats: IDependencyCacheStats;
-  private isInitialized: boolean = false;
+  isInitialized: boolean = false;
 
   constructor(
     private readonly deps: IDependencyCacheDeps,

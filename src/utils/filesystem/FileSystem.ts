@@ -9,23 +9,28 @@ import {
   IFileSystemDeps,
   IFileOperationOptions 
 } from './interfaces/IFileSystem';
+import { BaseService } from '@/types/services';
 
-export class FileSystem implements IFileSystem {
+
+export class FileSystem extends BaseService implements IFileSystem {
   private readonly debug: boolean;
 
   constructor(
     private readonly deps: IFileSystemDeps,
     options: IFileSystemOptions = {}
   ) {
+    super();
     this.debug = options.debug || false;
   }
 
-  public async initialize(): Promise<void> {
+  public override async initialize(): Promise<void> {
+    await super.initialize();
     this.logDebug('FileSystem service initialized');
   }
 
-  public cleanup(): void {
+  public override cleanup(): void {
     this.logDebug('FileSystem service cleanup');
+    super.cleanup();
   }
 
   private logDebug(message: string): void {
@@ -57,6 +62,7 @@ export class FileSystem implements IFileSystem {
   }
 
   public readFileSync(filePath: string, encoding: BufferEncoding = 'utf8'): string {
+    this.checkInitialized();
     this.logDebug(`Reading file synchronously: ${filePath}`);
     try {
       return fs.readFileSync(filePath, encoding);

@@ -3,7 +3,6 @@ import {
   IErrorDetails,
   IValidationErrorDetails,
   IFileSystemErrorDetails,
-  IConfigurationErrorDetails,
   ITokenizationErrorDetails,
   IDependencyAnalysisErrorDetails,
 } from "errors";

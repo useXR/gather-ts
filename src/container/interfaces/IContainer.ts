@@ -2,7 +2,7 @@
 
 import { IService } from "@/types/services";
 
-export interface IServiceIdentifier<T = any> {
+export interface IServiceIdentifier {
   toString(): string;
 }
 
@@ -11,7 +11,7 @@ export interface IServiceFactory<T extends IService> {
 }
 
 export interface IServiceRegistration<T extends IService = any> {
-  token: IServiceIdentifier<T>;
+  token: IServiceIdentifier;
   factory: IServiceFactory<T>;
   instance?: T;
   dependencies?: IServiceIdentifier[];
@@ -28,12 +28,12 @@ export interface IContainerEvents {
 }
 
 export interface IContainer extends IService {
-  register<T extends IService>(token: IServiceIdentifier<T>, instance: T): void;
+  register<T extends IService>(token: IServiceIdentifier, instance: T): void;
   registerFactory<T extends IService>(
-    token: IServiceIdentifier<T>,
+    token: IServiceIdentifier,
     factory: IServiceFactory<T>,
   ): void;
-  resolve<T extends IService>(token: IServiceIdentifier<T>): T;
+  resolve<T extends IService>(token: IServiceIdentifier): T;
   hasService(token: IServiceIdentifier): boolean;
   clear(): void;
 

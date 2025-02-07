@@ -1,7 +1,6 @@
 // src/core/dependency/DependencyAnalyzer.ts
 
 import madge from "madge";
-import path from "path";
 import { EventEmitter } from "events";
 import { DependencyAnalysisError, ValidationError } from "@/errors";
 import {
@@ -12,10 +11,8 @@ import {
   IDependencyAnalysisResult,
   IDependencyValidationResult,
   IDependencyProgress,
-  IDependencyAnalyzerEvents,
 } from "./interfaces/IDependencyAnalyzer";
 import { IDependencyMap } from "dependency";
-import { BaseService } from "@/types/services";
 
 export class DependencyAnalyzer
   extends EventEmitter

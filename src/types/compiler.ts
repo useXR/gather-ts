@@ -1,5 +1,4 @@
 import { IMetadata } from "./common";
-import { IDependencyMap } from "./dependency";
 
 export interface ICompileOptions {
   /**

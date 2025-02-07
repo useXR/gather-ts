@@ -22,9 +22,6 @@
   },
   "include": [
     "src/**/*",
-    "implementations/**/*",
-    "interfaces/**/*",
-    "errors/**/*"
   ],
   "exclude": [
     "node_modules",

@@ -6,7 +6,6 @@ import {
   ICompileOptions,
   ICompileResult,
 } from "@/types/compiler";
-import { EventEmitter } from "events";
 import { IConfigManager } from "@/config";
 import { IIgnoreHandler, IDependencyAnalyzer } from "@/core/dependency";
 import { ITokenCounter } from "@/core/tokenization";

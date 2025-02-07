@@ -22,6 +22,7 @@ export interface IDependencyCacheEntry {
   dependencies: IDependencyMap;
   timestamp: number;
   hash: string;
+  timeout: number;
 }
 
 export interface IDependencyCacheStats {

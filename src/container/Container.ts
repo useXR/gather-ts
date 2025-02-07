@@ -7,7 +7,6 @@ import {
   IServiceIdentifier,
   IServiceFactory,
   IServiceRegistration,
-  IContainerEvents,
 } from "./interfaces/IContainer";
 import { IService } from "@/types/services";
 
@@ -104,7 +103,7 @@ export class Container extends EventEmitter implements IContainer {
   }
 
   public register<T extends IService>(
-    token: IServiceIdentifier<T>,
+    token: IServiceIdentifier,
     instance: T,
   ): void {
     this.logDebug(`Registering service: ${token}`);
@@ -131,7 +130,7 @@ export class Container extends EventEmitter implements IContainer {
   }
 
   public registerFactory<T extends IService>(
-    token: IServiceIdentifier<T>,
+    token: IServiceIdentifier,
     factory: IServiceFactory<T>,
   ): void {
     this.logDebug(`Registering factory: ${token}`);
@@ -156,7 +155,7 @@ export class Container extends EventEmitter implements IContainer {
     });
   }
 
-  public resolve<T extends IService>(token: IServiceIdentifier<T>): T {
+  public resolve<T extends IService>(token: IServiceIdentifier): T {
     if (!this.isInitialized && !this.services.has(token.toString())) {
       throw new ValidationError("Container not initialized");
     }

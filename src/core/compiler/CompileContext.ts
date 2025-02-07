@@ -291,7 +291,6 @@ export class CompileContext extends EventEmitter implements ICompileContext {
         const result = await this.generateOutput(
           filesWithContent,
           this.deps.configManager,
-          options.maxDepth,
         );
 
         this.updateMetrics({
@@ -384,24 +383,31 @@ export class CompileContext extends EventEmitter implements ICompileContext {
 
   private async loadFileContents(
     files: IFileInfo[],
-    options: ICompileFileOptions = {},
+    options: ICompileFileOptions = {}
   ): Promise<IFileWithContent[]> {
     this.logDebug(`Loading contents for ${files.length} files`);
-
+  
     const result = await Promise.all(
       files.map(async file => {
         try {
-          const content = await this.deps.fileSystem.readFile(file.absolute);
-
-          // Add validation for empty content
-          if (!content || content.trim() === "") {
+          const content = await this.deps.fileSystem.readFile(file.absolute, {
+            encoding: options.encoding || 'utf8' // Use encoding option
+          });
+  
+          // Validate content if requested
+          if (options.validateContent && (!content || content.trim() === "")) {
             this.deps.logger.warn(`Empty file content for: ${file.path}`);
             return {
               ...file,
-              content: " ", // Provide a space instead of empty string
+              content: " ",
             };
           }
-
+  
+          // Check file size limit
+          if (options.maxSize && Buffer.byteLength(content) > options.maxSize) {
+            throw new ValidationError(`File exceeds size limit: ${file.path}`);
+          }
+  
           return {
             ...file,
             content,
@@ -409,15 +415,16 @@ export class CompileContext extends EventEmitter implements ICompileContext {
         } catch (error) {
           this.metrics.errors++;
           throw new ValidationError(
-            `Failed to read file: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
+            `Failed to read file: ${error instanceof Error ? error.message : String(error)}`,
             { filePath: file.absolute },
           );
         }
       }),
     );
-
+  
+    // Use stats for caching and metrics
+    this.stats.processedFiles += result.length;
+    
     this.logDebug(`Loaded contents for ${result.length} files`);
     return result;
   }
@@ -433,7 +440,6 @@ export class CompileContext extends EventEmitter implements ICompileContext {
   private async generateOutput(
     filesWithContent: IFileWithContent[],
     configManager: IConfigManager,
-    maxDepth?: number,
   ): Promise<string> {
     const generationTime = new Date().toISOString();
     const config = configManager.getConfig();

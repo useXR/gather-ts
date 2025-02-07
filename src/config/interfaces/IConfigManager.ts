@@ -1,6 +1,5 @@
 // src/config/interfaces/IConfigManager.ts
 
-import { EventEmitter } from "events";
 import { IService } from "@/types/services";
 import { IFileSystem } from "@/utils/filesystem/interfaces/IFileSystem";
 import { ILogger } from "@/utils/logging/interfaces/ILogger";

@@ -1,7 +1,7 @@
 // src/core/tokenization/TokenCache.ts
 
 import crypto from "crypto";
-import { FileSystemError, ValidationError, CacheError } from "@/errors";
+import { ValidationError, CacheError } from "@/errors";
 import {
   ITokenCache,
   ICacheEntry,

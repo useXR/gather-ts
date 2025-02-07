@@ -17,6 +17,7 @@ export class DependencyCache implements IDependencyCache {
   private readonly timeout: number;
   private stats: IDependencyCacheStats;
   isInitialized: boolean = false;
+  private cacheDuration: number;
 
   constructor(
     private readonly deps: IDependencyCacheDeps,
@@ -34,6 +35,7 @@ export class DependencyCache implements IDependencyCache {
       invalidations: 0,
       errors: 0,
     };
+    this.cacheDuration = 0;
   }
 
   private initializeStats(): void {
@@ -48,13 +50,23 @@ export class DependencyCache implements IDependencyCache {
     };
   }
 
-  public async initialize(): Promise<void> {
+  public async initialize(options: ICacheOperationOptions = {}): Promise<void> {
     this.logDebug("Initializing DependencyCache");
 
     try {
       if (this.isInitialized) {
         this.logDebug("DependencyCache already initialized");
         return;
+      }
+      
+      if (options.force) {
+        this.cache.clear();
+        this.logDebug("Forced cache clear during initialization");
+      }
+      
+      if (options.timeout) {
+        this.cacheDuration = options.timeout;
+        this.logDebug(`Cache timeout set to ${options.timeout}ms`);
       }
 
       this.cache.clear();
@@ -137,17 +149,23 @@ export class DependencyCache implements IDependencyCache {
     if (!this.isInitialized) {
       throw new CacheError("Cache not initialized", "write");
     }
-
     this.logDebug(`Setting cache entry for key: ${key}`);
-
+  
     try {
       const entry: IDependencyCacheEntry = {
         dependencies,
         timestamp: Date.now(),
         hash: this.computeHash(dependencies),
+        timeout: options.timeout || this.cacheDuration
       };
-
-      this.cache.set(key, entry);
+  
+      if (options.force) {
+        this.logDebug(`Force writing cache entry for ${key}`);
+        this.cache.set(key, entry);
+      } else if (!this.cache.has(key)) {
+        this.cache.set(key, entry);
+      }
+  
       this.updateStats();
       this.logDebug(`Cache entry set for key: ${key}`);
     } catch (error) {

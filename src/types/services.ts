@@ -1,9 +1,11 @@
 // src/types/services.ts
 
-import { ICompileOptions, ICompileResult } from "compiler";
-import { IGatherTSConfig, IConfigValidationResult } from "config";
-import { IFileWithContent } from "files";
-import { ISummaryStats } from "stats";
+import { ICompileOptions, ICompileResult } from "./compiler";
+import { IGatherTSConfig, IConfigValidationResult } from "./config";
+import { IFileWithContent } from "./files";
+import { ISummaryStats } from "./stats";
+
+
 
 export interface IService {
   isInitialized: boolean;

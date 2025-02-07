@@ -1,11 +1,5 @@
-import {
-  IBaseError,
-  IErrorDetails,
-  IValidationErrorDetails,
-  IFileSystemErrorDetails,
-  ITokenizationErrorDetails,
-  IDependencyAnalysisErrorDetails,
-} from "errors";
+
+import { IBaseError, IDependencyAnalysisErrorDetails, IErrorDetails, IFileSystemErrorDetails, ITokenizationErrorDetails, IValidationErrorDetails } from "@/types";
 import {
   ICacheErrorDetails,
   ICompilationErrorDetails,

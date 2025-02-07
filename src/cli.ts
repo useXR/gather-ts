@@ -1,5 +1,7 @@
-// src/cli.ts
+#!/usr/bin/env node
 
+// src/cli.ts
+import "./register";
 import { ICompileContext } from "@/core/compiler";
 import EventEmitter from "events";
 import path from "path";
@@ -9,7 +11,6 @@ import { configureContainer } from "./container/ContainerConfig";
 import { IArgumentParser } from "./core/compiler";
 import { ValidationError } from "./errors";
 import { ICLI, ICLIMetrics, ICLIOptions, ICLIResult } from "./interfaces/cli";
-import "./register";
 import { ILogger, IFileSystem } from "./utils";
 
 export class CLI extends EventEmitter implements ICLI {

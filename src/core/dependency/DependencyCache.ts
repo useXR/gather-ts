@@ -9,7 +9,7 @@ import {
   IDependencyCacheOptions,
   ICacheOperationOptions,
 } from "./interfaces/IDependencyCache";
-import { IDependencyMap } from "dependency";
+import { IDependencyMap } from "@/types";
 
 export class DependencyCache implements IDependencyCache {
   private cache: Map<string, IDependencyCacheEntry>;

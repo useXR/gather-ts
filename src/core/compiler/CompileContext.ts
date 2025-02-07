@@ -17,7 +17,7 @@ import {
   ICompilePhaseResult,
 } from "./interfaces/ICompileContext";
 import { IConfigManager } from "@/config";
-import { IDependencyMap } from "dependency";
+import { IDependencyMap } from "@/types";
 
 export class CompileContext extends EventEmitter implements ICompileContext {
   public isInitialized: boolean = false;

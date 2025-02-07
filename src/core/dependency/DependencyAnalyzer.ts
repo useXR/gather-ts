@@ -12,7 +12,7 @@ import {
   IDependencyValidationResult,
   IDependencyProgress,
 } from "./interfaces/IDependencyAnalyzer";
-import { IDependencyMap } from "dependency";
+import { IDependencyMap } from "@/types";
 
 export class DependencyAnalyzer
   extends EventEmitter

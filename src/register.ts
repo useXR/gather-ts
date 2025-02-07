@@ -1,4 +1,4 @@
-// src/register.ts
+#!/usr/bin/env node
 import path from "path";
 import moduleAlias from "module-alias";
 
@@ -6,3 +6,8 @@ import moduleAlias from "module-alias";
 moduleAlias.addAliases({
   "@": path.join(__dirname, "/"),
 });
+
+// Export for use in other files
+export const register = () => {
+  moduleAlias();
+};

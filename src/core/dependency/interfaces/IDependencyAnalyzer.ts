@@ -6,7 +6,7 @@ import { ILogger } from "@/utils/logging/interfaces/ILogger";
 import { IIgnoreHandler } from "./IIgnoreHandler";
 import { IDependencyCache } from "./IDependencyCache";
 import { EventEmitter } from "events";
-import { IDependencyMap } from "dependency";
+import { IDependencyMap } from "@/types";
 
 export interface IDependencyAnalyzerDeps {
   fileSystem: IFileSystem;

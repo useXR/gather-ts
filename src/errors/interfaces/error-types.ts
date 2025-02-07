@@ -1,4 +1,4 @@
-import { IErrorDetails } from "errors";
+import { IErrorDetails } from "@/types";
 
 export interface IValidationErrorDetails extends IErrorDetails {
   filePath?: string;

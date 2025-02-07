@@ -11,10 +11,8 @@ import {
   ITokenizeOptions,
   ITokenizerModelConfig,
 } from "./interfaces/ITokenCounter";
-import { TiktokenModel } from "models/tokenizer";
-import { IFileWithContent } from "files";
-import { ISummaryStats } from "stats";
 import { BaseService } from "@/types/services";
+import { IFileWithContent, ISummaryStats, TiktokenModel } from "@/types";
 
 const MODEL_CONFIGS: Record<TiktokenModel, ITokenizerModelConfig> = {
   "gpt-3.5-turbo": { name: "gpt-3.5-turbo", contextLimit: 16384 },

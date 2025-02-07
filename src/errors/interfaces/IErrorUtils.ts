@@ -1,7 +1,7 @@
 import { ILogger } from "@/utils";
-import { IBaseError, IErrorDetails } from "errors";
 import { IService } from "@/types/services";
 import { IErrorClassification, IErrorTransformation } from "./IError";
+import { IBaseError, IErrorDetails } from "@/types";
 
 // Error Utils types
 export interface IErrorUtilsDeps {

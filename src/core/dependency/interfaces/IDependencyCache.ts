@@ -1,8 +1,8 @@
 // src/core/dependency/interfaces/IDependencyCache.ts
 
+import { IDependencyMap } from "@/types";
 import { IService } from "@/types/services";
 import { ILogger } from "@/utils/logging/interfaces/ILogger";
-import { IDependencyMap } from "dependency";
 
 export interface IDependencyCacheDeps {
   logger: ILogger;

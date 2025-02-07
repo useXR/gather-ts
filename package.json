@@ -1,6 +1,6 @@
 {
   "name": "gather-ts",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "A powerful code analysis and packaging tool designed for creating AI-friendly code representations for javascript and typescript projects.",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",

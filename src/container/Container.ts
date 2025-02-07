@@ -211,6 +211,7 @@ export const ServiceTokens = {
   COMPILER: "Compiler",
   VALIDATOR: "Validator",
   ARGUMENT_PARSER: "ArgumentParser",
+  TEMPLATE_MANAGER: "TemplateManager",
 } as const;
 
 export type ServiceToken = (typeof ServiceTokens)[keyof typeof ServiceTokens];

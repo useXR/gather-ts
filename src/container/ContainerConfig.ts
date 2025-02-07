@@ -26,6 +26,9 @@ import { IErrorHandler } from "@/errors/interfaces/IErrorHandler";
 import { IArgumentParser } from "@/core/compiler/interfaces/IArgumentParser";
 import { ICompileContext } from "@/core/compiler/interfaces/ICompileContext";
 import { CompileContext } from "@/core/compiler";
+import { TemplateManager } from "@/core/templating/TemplateManager";
+import { ITemplateManager } from "@/core/templating/interfaces/ITemplateManager";
+import { registerDefaultTemplates } from "@/core/templating/DefaultTemplates";
 
 export async function configureContainer(
   projectRoot: string,
@@ -199,6 +202,18 @@ export async function configureContainer(
     const argumentParser = container.resolve<IArgumentParser>(ServiceTokens.ARGUMENT_PARSER);
     await argumentParser.initialize();
 
+    container.registerFactory(ServiceTokens.TEMPLATE_MANAGER, () => {
+      return new TemplateManager(
+        { logger },
+        { debug: options.debug }
+      );
+    });
+
+    const templateManager = container.resolve<ITemplateManager>(
+      ServiceTokens.TEMPLATE_MANAGER
+    );
+    await templateManager.initialize();
+
     // Register Compiler
     container.registerFactory(ServiceTokens.COMPILER, () => {
       return new CompileContext(
@@ -209,7 +224,8 @@ export async function configureContainer(
           errorHandler,
           dependencyAnalyzer,
           logger,
-          fileSystem
+          fileSystem,
+          templateManager
         },
         {
           debug: options.debug,
@@ -220,6 +236,9 @@ export async function configureContainer(
 
     const compiler = container.resolve<ICompileContext>(ServiceTokens.COMPILER);
     await compiler.initialize();
+    
+    // Register default templates
+    registerDefaultTemplates(templateManager);
 
     logger.debug('Container configuration complete');
     return container;

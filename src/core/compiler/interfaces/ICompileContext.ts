@@ -8,6 +8,7 @@ import { IIgnoreHandler, IDependencyAnalyzer } from '@/core/dependency';
 import { ITokenCounter } from '@/core/tokenization';
 import { IErrorHandler } from '@/errors/interfaces/IErrorHandler';
 import { ILogger, IFileSystem } from '@/utils';
+import { ITemplateManager } from '@/core/templating/interfaces/ITemplateManager';
 
 export type CompilePhase = 
   | 'initialization'
@@ -25,6 +26,7 @@ export interface ICompileContextDeps {
   dependencyAnalyzer: IDependencyAnalyzer;
   logger: ILogger;
   fileSystem: IFileSystem;
+  templateManager: ITemplateManager;
 }
 
 export interface ICompilePhaseResult {

@@ -1,12 +1,12 @@
 // src/core/dependency/interfaces/IDependencyAnalyzer.ts
 
-import { IService } from '@/types/services';
-import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
-import { ILogger } from '@/utils/logging/interfaces/ILogger';
-import { IIgnoreHandler } from './IIgnoreHandler';
-import { IDependencyCache } from './IDependencyCache';
-import { EventEmitter } from 'events';
-import { IDependencyMap } from 'dependency';
+import { IService } from "@/types/services";
+import { IFileSystem } from "@/utils/filesystem/interfaces/IFileSystem";
+import { ILogger } from "@/utils/logging/interfaces/ILogger";
+import { IIgnoreHandler } from "./IIgnoreHandler";
+import { IDependencyCache } from "./IDependencyCache";
+import { EventEmitter } from "events";
+import { IDependencyMap } from "dependency";
 
 export interface IDependencyAnalyzerDeps {
   fileSystem: IFileSystem;
@@ -52,55 +52,53 @@ export interface IDependencyAnalysisResult {
 }
 
 export interface IDependencyProgress {
-  phase: 'validation' | 'analysis' | 'gathering';
+  phase: "validation" | "analysis" | "gathering";
   completed: number;
   total: number;
   currentFile?: string;
 }
 
 export interface IDependencyAnalyzerEvents {
-  'analysis:start': { entryFiles: string[]; timestamp: number };
-  'analysis:complete': { result: IDependencyAnalysisResult; timestamp: number };
-  'analysis:error': { error: Error; phase: string; timestamp: number };
-  'progress': IDependencyProgress;
-  'warning': { message: string; file?: string; timestamp: number };
+  "analysis:start": { entryFiles: string[]; timestamp: number };
+  "analysis:complete": { result: IDependencyAnalysisResult; timestamp: number };
+  "analysis:error": { error: Error; phase: string; timestamp: number };
+  progress: IDependencyProgress;
+  warning: { message: string; file?: string; timestamp: number };
 }
 
 export interface IDependencyAnalyzer extends IService, EventEmitter {
   validateEntryFiles(
-    entryFiles: string[], 
+    entryFiles: string[],
     rootDir: string,
-    options?: IAnalyzeOptions
+    options?: IAnalyzeOptions,
   ): Promise<string[]>;
 
   analyzeDependencies(
-    entryFiles: string | string[], 
+    entryFiles: string | string[],
     projectRoot: string,
-    options?: IAnalyzeOptions
+    options?: IAnalyzeOptions,
   ): Promise<IDependencyAnalysisResult>;
 
   gatherDependencies(
-    deps: IDependencyMap, 
-    entryFiles: string[], 
-    maxDepth?: number
+    deps: IDependencyMap,
+    entryFiles: string[],
+    maxDepth?: number,
   ): Promise<string[]>;
 
-  getCircularDependencies(
-    dependencyMap: IDependencyMap
-  ): Promise<string[][]>;
+  getCircularDependencies(dependencyMap: IDependencyMap): Promise<string[][]>;
 
   on<K extends keyof IDependencyAnalyzerEvents>(
     event: K,
-    listener: (data: IDependencyAnalyzerEvents[K]) => void
+    listener: (data: IDependencyAnalyzerEvents[K]) => void,
   ): this;
 
   off<K extends keyof IDependencyAnalyzerEvents>(
     event: K,
-    listener: (data: IDependencyAnalyzerEvents[K]) => void
+    listener: (data: IDependencyAnalyzerEvents[K]) => void,
   ): this;
 
   emit<K extends keyof IDependencyAnalyzerEvents>(
     event: K,
-    data: IDependencyAnalyzerEvents[K]
+    data: IDependencyAnalyzerEvents[K],
   ): boolean;
 }

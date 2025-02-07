@@ -1,0 +1,25 @@
+# Development files
+src/
+tests/
+docs/
+.github/
+.vscode/
+coverage/
+*.test.ts
+*.spec.ts
+
+# Configuration files
+.eslintrc.js
+.prettierrc.js
+jest.config.ts
+tsconfig.json
+typedoc.json
+
+# Build artifacts
+*.tsbuildinfo
+.nyc_output/
+
+# Development tools
+.editorconfig
+.gitattributes
+CONTRIBUTING.md

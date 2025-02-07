@@ -64,7 +64,7 @@ export interface ITokenCounter extends IService {
   printSummary(stats: ISummaryStats, outputFile: string): void;
   processBatch(
     files: IFileWithContent[],
-    batchSize?: number
+    batchSize?: number,
   ): Promise<Array<{ file: string; tokens: number }>>;
   getStats(): ITokenCounterStats;
   getMetrics(): ITokenCounterMetrics;

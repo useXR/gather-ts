@@ -32,7 +32,7 @@ import { registerDefaultTemplates } from "@/core/templating/DefaultTemplates";
 
 export async function configureContainer(
   projectRoot: string,
-  options: IContainerOptions = {}
+  options: IContainerOptions = {},
 ): Promise<IContainer> {
   const container = Container.getInstance(options.debug);
 
@@ -42,26 +42,28 @@ export async function configureContainer(
       return new Logger(
         {
           outputStream: process.stdout,
-          errorStream: process.stderr
+          errorStream: process.stderr,
         },
         {
           enableDebug: options.debug,
           timestamp: options.debug,
-          logLevel: options.debug ? 'debug' : 'info'
-        }
+          logLevel: options.debug ? "debug" : "info",
+        },
       );
     });
 
     const logger = container.resolve<ILogger>(ServiceTokens.LOGGER);
     await logger.initialize();
-    logger.debug('Configuring container services...');
+    logger.debug("Configuring container services...");
 
     // Register FileSystem
     container.registerFactory(ServiceTokens.FILE_SYSTEM, () => {
       return new FileSystem({ logger }, { debug: options.debug });
     });
 
-    const fileSystem = container.resolve<IFileSystem>(ServiceTokens.FILE_SYSTEM);
+    const fileSystem = container.resolve<IFileSystem>(
+      ServiceTokens.FILE_SYSTEM,
+    );
     await fileSystem.initialize();
 
     // Register Validator
@@ -77,43 +79,51 @@ export async function configureContainer(
       return new ErrorUtils({ logger }, { debug: options.debug });
     });
 
-    const errorUtils = container.resolve<IErrorUtils>(ServiceTokens.ERROR_UTILS);
+    const errorUtils = container.resolve<IErrorUtils>(
+      ServiceTokens.ERROR_UTILS,
+    );
     await errorUtils.initialize();
 
     // Register ErrorHandler
     container.registerFactory(ServiceTokens.ERROR_HANDLER, () => {
       return new ErrorHandler(
-        { 
+        {
           fileSystem,
           logger,
-          errorUtils
+          errorUtils,
         },
         {
           logToConsole: true,
           logToFile: options.debug,
-          logFilePath: options.debug ? fileSystem.joinPath(projectRoot, '.deppack', 'error.log') : undefined,
-          debug: options.debug
-        }
+          logFilePath: options.debug
+            ? fileSystem.joinPath(projectRoot, ".gather-ts", "error.log")
+            : undefined,
+          debug: options.debug,
+        },
       );
     });
 
-    const errorHandler = container.resolve<IErrorHandler>(ServiceTokens.ERROR_HANDLER);
+    const errorHandler = container.resolve<IErrorHandler>(
+      ServiceTokens.ERROR_HANDLER,
+    );
     await errorHandler.initialize();
 
     // Register ConfigManager
     container.registerFactory(ServiceTokens.CONFIG_MANAGER, () => {
       return new ConfigManager(
         projectRoot,
-        { 
+        {
           fileSystem,
           logger,
-          validator
+          validator,
         },
-        { debug: options.debug }
+        { debug: options.debug },
       );
     });
 
-    const configManager = container.resolve<IConfigManager>(ServiceTokens.CONFIG_MANAGER);
+    const configManager = container.resolve<IConfigManager>(
+      ServiceTokens.CONFIG_MANAGER,
+    );
     await configManager.initialize();
 
     // Register TokenCache
@@ -122,16 +132,18 @@ export async function configureContainer(
         projectRoot,
         {
           fileSystem,
-          logger
+          logger,
         },
         {
           debug: options.debug,
-          maxCacheAge: options.maxCacheAge
-        }
+          maxCacheAge: options.maxCacheAge,
+        },
       );
     });
 
-    const tokenCache = container.resolve<ITokenCache>(ServiceTokens.TOKEN_CACHE);
+    const tokenCache = container.resolve<ITokenCache>(
+      ServiceTokens.TOKEN_CACHE,
+    );
     await tokenCache.initialize();
 
     // Register IgnoreHandler
@@ -140,13 +152,15 @@ export async function configureContainer(
         projectRoot,
         {
           fileSystem,
-          logger
+          logger,
         },
-        { debug: options.debug }
+        { debug: options.debug },
       );
     });
 
-    const ignoreHandler = container.resolve<IIgnoreHandler>(ServiceTokens.IGNORE_HANDLER);
+    const ignoreHandler = container.resolve<IIgnoreHandler>(
+      ServiceTokens.IGNORE_HANDLER,
+    );
     await ignoreHandler.initialize();
 
     // Register TokenCounter
@@ -156,16 +170,18 @@ export async function configureContainer(
           configManager,
           fileSystem,
           logger,
-          cache: tokenCache
+          cache: tokenCache,
         },
         {
           debug: options.debug,
-          batchSize: options.batchSize
-        }
+          batchSize: options.batchSize,
+        },
       );
     });
 
-    const tokenCounter = container.resolve<ITokenCounter>(ServiceTokens.TOKEN_COUNTER);
+    const tokenCounter = container.resolve<ITokenCounter>(
+      ServiceTokens.TOKEN_COUNTER,
+    );
     await tokenCounter.initialize();
 
     // Register DependencyAnalyzer
@@ -174,17 +190,19 @@ export async function configureContainer(
         {
           fileSystem,
           logger,
-          ignoreHandler
+          ignoreHandler,
         },
         {
           debug: options.debug,
           fileExtensions: options.fileExtensions,
-          tsConfigPath: options.customTsConfigPath
-        }
+          tsConfigPath: options.customTsConfigPath,
+        },
       );
     });
 
-    const dependencyAnalyzer = container.resolve<IDependencyAnalyzer>(ServiceTokens.DEPENDENCY_ANALYZER);
+    const dependencyAnalyzer = container.resolve<IDependencyAnalyzer>(
+      ServiceTokens.DEPENDENCY_ANALYZER,
+    );
     await dependencyAnalyzer.initialize();
 
     // Register ArgumentParser
@@ -193,24 +211,23 @@ export async function configureContainer(
         {
           logger,
           fileSystem,
-          validator
+          validator,
         },
-        { debug: options.debug }
+        { debug: options.debug },
       );
     });
 
-    const argumentParser = container.resolve<IArgumentParser>(ServiceTokens.ARGUMENT_PARSER);
+    const argumentParser = container.resolve<IArgumentParser>(
+      ServiceTokens.ARGUMENT_PARSER,
+    );
     await argumentParser.initialize();
 
     container.registerFactory(ServiceTokens.TEMPLATE_MANAGER, () => {
-      return new TemplateManager(
-        { logger },
-        { debug: options.debug }
-      );
+      return new TemplateManager({ logger }, { debug: options.debug });
     });
 
     const templateManager = container.resolve<ITemplateManager>(
-      ServiceTokens.TEMPLATE_MANAGER
+      ServiceTokens.TEMPLATE_MANAGER,
     );
     await templateManager.initialize();
 
@@ -225,22 +242,22 @@ export async function configureContainer(
           dependencyAnalyzer,
           logger,
           fileSystem,
-          templateManager
+          templateManager,
         },
         {
           debug: options.debug,
-          batchSize: options.batchSize
-        }
+          batchSize: options.batchSize,
+        },
       );
     });
 
     const compiler = container.resolve<ICompileContext>(ServiceTokens.COMPILER);
     await compiler.initialize();
-    
+
     // Register default templates
     registerDefaultTemplates(templateManager);
 
-    logger.debug('Container configuration complete');
+    logger.debug("Container configuration complete");
     return container;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -249,7 +266,7 @@ export async function configureContainer(
 }
 
 export async function initializeContainer(
-  container: IContainer
+  container: IContainer,
 ): Promise<void> {
   const logger = container.resolve<ILogger>(ServiceTokens.LOGGER);
 
@@ -267,9 +284,9 @@ export async function initializeContainer(
 export function cleanupContainer(container: IContainer): void {
   try {
     const logger = container.resolve<ILogger>(ServiceTokens.LOGGER);
-    logger.debug('Starting container cleanup');
+    logger.debug("Starting container cleanup");
     container.cleanup();
-    logger.debug('Container cleanup complete');
+    logger.debug("Container cleanup complete");
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Failed to cleanup container: ${errorMessage}`);

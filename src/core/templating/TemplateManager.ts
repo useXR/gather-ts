@@ -1,13 +1,13 @@
 // src/core/templating/TemplateManager.ts
-import { ValidationError } from '@/errors';
-import { BaseService } from '@/types/services';
-import { 
+import { ValidationError } from "@/errors";
+import { BaseService } from "@/types/services";
+import {
   ITemplateManager,
   ITemplateManagerDeps,
   ITemplateManagerOptions,
   ITemplate,
-  ITemplateContext
-} from './interfaces/ITemplateManager';
+  ITemplateContext,
+} from "./interfaces/ITemplateManager";
 
 export class TemplateManager extends BaseService implements ITemplateManager {
   private templates: Map<string, ITemplate> = new Map();
@@ -15,7 +15,7 @@ export class TemplateManager extends BaseService implements ITemplateManager {
 
   constructor(
     private readonly deps: ITemplateManagerDeps,
-    options: ITemplateManagerOptions = {}
+    options: ITemplateManagerOptions = {},
   ) {
     super();
     this.debug = options.debug || false;
@@ -23,11 +23,11 @@ export class TemplateManager extends BaseService implements ITemplateManager {
 
   public override async initialize(): Promise<void> {
     await super.initialize();
-    this.logDebug('Initializing TemplateManager');
+    this.logDebug("Initializing TemplateManager");
   }
 
   public override cleanup(): void {
-    this.logDebug('Cleaning up TemplateManager');
+    this.logDebug("Cleaning up TemplateManager");
     this.templates.clear();
     super.cleanup();
   }
@@ -42,7 +42,9 @@ export class TemplateManager extends BaseService implements ITemplateManager {
     this.checkInitialized();
 
     if (this.templates.has(template.id)) {
-      throw new ValidationError(`Template with ID ${template.id} already exists`);
+      throw new ValidationError(
+        `Template with ID ${template.id} already exists`,
+      );
     }
 
     this.validateTemplate(template);
@@ -70,16 +72,16 @@ export class TemplateManager extends BaseService implements ITemplateManager {
     const template = this.getTemplate(templateId);
     this.validateContext(template, context);
     const fullContext = this.applyDefaults(template, context);
-    
+
     const result = this.renderTemplate(template.content, fullContext);
     this.logDebug(`Rendered template: ${templateId}`);
-    
+
     return result;
   }
 
   private validateTemplate(template: ITemplate): void {
     if (!template.id || !template.content) {
-      throw new ValidationError('Template must have id and content');
+      throw new ValidationError("Template must have id and content");
     }
 
     const declaredVars = new Set(template.variables.map(v => v.name));
@@ -88,26 +90,29 @@ export class TemplateManager extends BaseService implements ITemplateManager {
     const undeclaredVars = [...usedVars].filter(v => !declaredVars.has(v));
     if (undeclaredVars.length > 0) {
       throw new ValidationError(
-        `Template contains undeclared variables: ${undeclaredVars.join(', ')}`
+        `Template contains undeclared variables: ${undeclaredVars.join(", ")}`,
       );
     }
   }
 
-  private validateContext(template: ITemplate, context: ITemplateContext): void {
+  private validateContext(
+    template: ITemplate,
+    context: ITemplateContext,
+  ): void {
     const requiredVars = template.variables.filter(v => v.required);
-    
+
     for (const variable of requiredVars) {
       if (!(variable.name in context)) {
         throw new ValidationError(
-          `Missing required variable: ${variable.name}`
+          `Missing required variable: ${variable.name}`,
         );
       }
     }
   }
 
   private applyDefaults(
-    template: ITemplate, 
-    context: ITemplateContext
+    template: ITemplate,
+    context: ITemplateContext,
   ): ITemplateContext {
     const result = { ...context };
 
@@ -134,7 +139,7 @@ export class TemplateManager extends BaseService implements ITemplateManager {
 
   private renderTemplate(content: string, context: ITemplateContext): string {
     return content.replace(/\{\{([\w.-]+)\}\}/g, (_, key) => {
-      return context[key] || '';
+      return context[key] || "";
     });
   }
 }

@@ -1,22 +1,26 @@
 // src/core/compiler/interfaces/ICompileContext.ts
 
-import { IService } from '@/types/services';
-import { ICompileMetrics, ICompileOptions, ICompileResult } from '@/types/compiler';
-import { EventEmitter } from 'events';
-import { IConfigManager } from '@/config';
-import { IIgnoreHandler, IDependencyAnalyzer } from '@/core/dependency';
-import { ITokenCounter } from '@/core/tokenization';
-import { IErrorHandler } from '@/errors/interfaces/IErrorHandler';
-import { ILogger, IFileSystem } from '@/utils';
-import { ITemplateManager } from '@/core/templating/interfaces/ITemplateManager';
+import { IService } from "@/types/services";
+import {
+  ICompileMetrics,
+  ICompileOptions,
+  ICompileResult,
+} from "@/types/compiler";
+import { EventEmitter } from "events";
+import { IConfigManager } from "@/config";
+import { IIgnoreHandler, IDependencyAnalyzer } from "@/core/dependency";
+import { ITokenCounter } from "@/core/tokenization";
+import { IErrorHandler } from "@/errors/interfaces/IErrorHandler";
+import { ILogger, IFileSystem } from "@/utils";
+import { ITemplateManager } from "@/core/templating/interfaces/ITemplateManager";
 
-export type CompilePhase = 
-  | 'initialization'
-  | 'dependency-analysis'
-  | 'file-processing'
-  | 'tokenization'
-  | 'output-generation'
-  | 'completion';
+export type CompilePhase =
+  | "initialization"
+  | "dependency-analysis"
+  | "file-processing"
+  | "tokenization"
+  | "output-generation"
+  | "completion";
 
 export interface ICompileContextDeps {
   configManager: IConfigManager;
@@ -56,11 +60,15 @@ export interface ICompileProgress {
 }
 
 export interface ICompileContextEvents {
-  'phase:start': { phase: string; timestamp: number };
-  'phase:end': { phase: string; timestamp: number; result: ICompilePhaseResult };
-  'error': { error: Error; phase?: string };
-  'warning': { message: string; phase?: string };
-  'progress': ICompileProgress;
+  "phase:start": { phase: string; timestamp: number };
+  "phase:end": {
+    phase: string;
+    timestamp: number;
+    result: ICompilePhaseResult;
+  };
+  error: { error: Error; phase?: string };
+  warning: { message: string; phase?: string };
+  progress: ICompileProgress;
 }
 
 export interface ICompileContextOptions {
@@ -90,7 +98,7 @@ export interface ICompileContext extends IService {
   getMetrics(): ICompileMetrics;
 
   // Add event emitter methods
-  on(event: 'progress', listener: (progress: ICompileProgress) => void): this;
-  off(event: 'progress', listener: (progress: ICompileProgress) => void): this;
-  emit(event: 'progress', progress: ICompileProgress): boolean;
+  on(event: "progress", listener: (progress: ICompileProgress) => void): this;
+  off(event: "progress", listener: (progress: ICompileProgress) => void): this;
+  emit(event: "progress", progress: ICompileProgress): boolean;
 }

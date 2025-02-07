@@ -1,11 +1,11 @@
 // src/config/interfaces/IConfigManager.ts
 
-import { EventEmitter } from 'events';
-import { IService } from '@/types/services';
-import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
-import { ILogger } from '@/utils/logging/interfaces/ILogger';
-import { IValidator } from '@/utils/validation/interfaces/IValidator';
-import { IDeppackConfig, IConfigValidationResult } from '@/types/config';
+import { EventEmitter } from "events";
+import { IService } from "@/types/services";
+import { IFileSystem } from "@/utils/filesystem/interfaces/IFileSystem";
+import { ILogger } from "@/utils/logging/interfaces/ILogger";
+import { IValidator } from "@/utils/validation/interfaces/IValidator";
+import { IGatherTSConfig, IConfigValidationResult } from "@/types/config";
 
 /**
  * Dependencies required by ConfigManager
@@ -37,7 +37,7 @@ export interface IConfigLoadOptions {
   /** Skip validation */
   skipValidation?: boolean;
   /** Merge strategy for arrays */
-  arrayMergeStrategy?: 'replace' | 'concat' | 'unique';
+  arrayMergeStrategy?: "replace" | "concat" | "unique";
 }
 
 /**
@@ -45,11 +45,11 @@ export interface IConfigLoadOptions {
  */
 export interface IConfigChangeEvent {
   /** Type of change */
-  type: 'update' | 'reset';
+  type: "update" | "reset";
   /** Previous configuration */
-  oldConfig?: IDeppackConfig;
+  oldConfig?: IGatherTSConfig;
   /** New configuration */
-  newConfig: IDeppackConfig;
+  newConfig: IGatherTSConfig;
   /** Timestamp of change */
   timestamp: number;
   /** Whether change was from watch */
@@ -57,11 +57,11 @@ export interface IConfigChangeEvent {
 }
 
 export interface IConfigValidator {
-  validateConfig(config: Partial<IDeppackConfig>): void;
-  validateTokenizerConfig(config: Partial<IDeppackConfig>): void;
-  validateOutputFormat(config: Partial<IDeppackConfig>): void;
-  validateCustomText(config: Partial<IDeppackConfig>): void;
-  validateAll(config: Partial<IDeppackConfig>): IConfigValidationResult;
+  validateConfig(config: Partial<IGatherTSConfig>): void;
+  validateTokenizerConfig(config: Partial<IGatherTSConfig>): void;
+  validateOutputFormat(config: Partial<IGatherTSConfig>): void;
+  validateCustomText(config: Partial<IGatherTSConfig>): void;
+  validateAll(config: Partial<IGatherTSConfig>): IConfigValidationResult;
 }
 
 /**
@@ -71,7 +71,7 @@ export interface IConfigValidationEvent {
   /** Validation result */
   result: IConfigValidationResult;
   /** Configuration being validated */
-  config: Partial<IDeppackConfig>;
+  config: Partial<IGatherTSConfig>;
   /** Timestamp of validation */
   timestamp: number;
 }
@@ -100,8 +100,8 @@ export interface IConfigManager extends IService {
   removeAllListeners(event?: string | symbol): this;
 
   // Config-specific methods
-  getConfig(): IDeppackConfig;
-  updateConfig(updates: Partial<IDeppackConfig>): Promise<IDeppackConfig>;
+  getConfig(): IGatherTSConfig;
+  updateConfig(updates: Partial<IGatherTSConfig>): Promise<IGatherTSConfig>;
   saveConfig(): Promise<void>;
   reset(): void;
   getMetrics(): IConfigMetrics;
@@ -114,7 +114,7 @@ export interface IConfigManager extends IService {
   isDebugEnabled(): boolean;
   getModelTokenLimit(): number;
   getTokenWarning(totalTokens: number): string | null;
-  validateConfig(config: Partial<IDeppackConfig>): IConfigValidationResult;
+  validateConfig(config: Partial<IGatherTSConfig>): IConfigValidationResult;
 }
 
 /**
@@ -129,8 +129,8 @@ export interface IConfigManagerStatic {
  * ConfigManager events map
  */
 export interface IConfigManagerEvents {
-  'configChange': IConfigChangeEvent;
-  'configValidation': IConfigValidationEvent;
-  'error': Error;
-  'warning': string;
+  configChange: IConfigChangeEvent;
+  configValidation: IConfigValidationEvent;
+  error: Error;
+  warning: string;
 }

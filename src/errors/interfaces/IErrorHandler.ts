@@ -1,9 +1,9 @@
 // src/errors/interfaces/IErrorHandler.ts
 
-import { IService } from '@/types/services';
-import { ILogger } from '@/utils/logging/interfaces/ILogger';
-import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
-import { IErrorUtils } from './IErrorUtils';
+import { IService } from "@/types/services";
+import { ILogger } from "@/utils/logging/interfaces/ILogger";
+import { IFileSystem } from "@/utils/filesystem/interfaces/IFileSystem";
+import { IErrorUtils } from "./IErrorUtils";
 
 // Error Handler types
 export interface IErrorProcessingStrategy {
@@ -36,8 +36,6 @@ export interface IErrorHandler extends IService {
   createErrorBoundary(fn: () => Promise<void>): Promise<void>;
   registerStrategy(strategy: IErrorProcessingStrategy): void;
 }
-
-
 
 export interface IErrorHandlerConfig extends IErrorHandlerOptions {
   strategies?: IErrorProcessingStrategy[];

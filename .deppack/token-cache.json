@@ -1,0 +1,367 @@
+{
+  "src\\app\\admin\\dashboard\\page.tsx": {
+    "hash": "1bcdca8e4c197b0efcecbf2c8b68497e",
+    "tokens": 235,
+    "lastUpdated": "2025-02-05T19:23:36.679Z"
+  },
+  "src\\components\\admin\\admin-content.tsx": {
+    "hash": "1ea6360235cb4f38e378793d8d7250ef",
+    "tokens": 1597,
+    "lastUpdated": "2025-02-05T19:23:36.686Z"
+  },
+  "src\\components\\admin\\admin-dashboard.tsx": {
+    "hash": "d1545530fd46d0072818e9a3efc92cbd",
+    "tokens": 828,
+    "lastUpdated": "2025-02-05T19:23:36.696Z"
+  },
+  "src\\components\\admin\\audit-log-viewer.tsx": {
+    "hash": "141a9ae0ac22fb9ecf716a9843dfe78c",
+    "tokens": 1431,
+    "lastUpdated": "2025-02-05T19:23:36.704Z"
+  },
+  "src\\components\\admin\\permission-groups.tsx": {
+    "hash": "439dfec946b244eb609648ba4482e12c",
+    "tokens": 5761,
+    "lastUpdated": "2025-02-05T19:23:36.717Z"
+  },
+  "src\\components\\admin\\permission-matrix.tsx": {
+    "hash": "1ecf41bd40ff39b22de28d07ecdd896a",
+    "tokens": 1722,
+    "lastUpdated": "2025-02-05T19:23:36.720Z"
+  },
+  "src\\components\\admin\\role-management.tsx": {
+    "hash": "f95eb8c85a725ef779ec9f42c041805c",
+    "tokens": 1857,
+    "lastUpdated": "2025-02-05T19:23:36.753Z"
+  },
+  "src\\components\\admin\\user-management.tsx": {
+    "hash": "18ed2352acbba4f2c8c7aa63cf4d9e1f",
+    "tokens": 1791,
+    "lastUpdated": "2025-02-05T19:23:36.832Z"
+  },
+  "src\\components\\common\\conditional-content.tsx": {
+    "hash": "da32a57b31869dd0ca8baccc1870c563",
+    "tokens": 321,
+    "lastUpdated": "2025-02-05T19:23:36.911Z"
+  },
+  "src\\components\\common\\loading.tsx": {
+    "hash": "039c9c3c5d99905417d7ccf14bb5b302",
+    "tokens": 272,
+    "lastUpdated": "2025-02-05T19:23:37.013Z"
+  },
+  "src\\env.ts": {
+    "hash": "d7a02ee3fa650c24675749300a6925ca",
+    "tokens": 347,
+    "lastUpdated": "2025-02-05T19:23:37.119Z"
+  },
+  "src\\hooks\\use-auth.ts": {
+    "hash": "43209e24124d468434473462ce89ef7e",
+    "tokens": 913,
+    "lastUpdated": "2025-02-05T19:23:37.238Z"
+  },
+  "src\\hooks\\use-toast.ts": {
+    "hash": "23f3f1928207fb53866873df6c6d93dd",
+    "tokens": 1044,
+    "lastUpdated": "2025-02-05T19:23:37.342Z"
+  },
+  "src\\lib\\schema\\models\\action.model.ts": {
+    "hash": "e3780b266da61f9567bc1217b2234fa4",
+    "tokens": 339,
+    "lastUpdated": "2025-02-05T19:23:37.412Z"
+  },
+  "src\\lib\\schema\\models\\feature.model.ts": {
+    "hash": "4a70e57ca2dcd9c45a180049b25470a6",
+    "tokens": 339,
+    "lastUpdated": "2025-02-05T19:23:37.507Z"
+  },
+  "src\\lib\\schema\\models\\permission.model.ts": {
+    "hash": "580166d0ba409aab997dfd868dced0b9",
+    "tokens": 348,
+    "lastUpdated": "2025-02-05T19:23:37.604Z"
+  },
+  "src\\lib\\schema\\models\\role-audit-log.model.ts": {
+    "hash": "09dcddf771dda2375db6f5354d7ed216",
+    "tokens": 407,
+    "lastUpdated": "2025-02-05T19:23:37.710Z"
+  },
+  "src\\lib\\schema\\models\\role.model.ts": {
+    "hash": "d43228d0d5963a43a8c67833154558fe",
+    "tokens": 339,
+    "lastUpdated": "2025-02-05T19:23:37.817Z"
+  },
+  "src\\lib\\schema\\models\\user-profile.model.ts": {
+    "hash": "9a43d2ddd97f33b59d8222cc444537f8",
+    "tokens": 411,
+    "lastUpdated": "2025-02-05T19:23:37.917Z"
+  },
+  "src\\server\\api\\root.ts": {
+    "hash": "9d3853ccbf6c68ff9ca09a547705d971",
+    "tokens": 274,
+    "lastUpdated": "2025-02-05T19:23:38.033Z"
+  },
+  "src\\server\\api\\routers\\action.ts": {
+    "hash": "8af4b37a9f21a36a932b22035df6f1bf",
+    "tokens": 787,
+    "lastUpdated": "2025-02-05T19:23:38.137Z"
+  },
+  "src\\server\\api\\routers\\feature.ts": {
+    "hash": "04a642f6a16d8b0c9db63bba2aa26182",
+    "tokens": 962,
+    "lastUpdated": "2025-02-05T19:23:38.257Z"
+  },
+  "src\\server\\api\\routers\\permission-group.ts": {
+    "hash": "72247c861d5052c4567857506c3b863b",
+    "tokens": 2725,
+    "lastUpdated": "2025-02-05T19:23:38.366Z"
+  },
+  "src\\server\\api\\routers\\permission-override.ts": {
+    "hash": "de55ad22caef782ccf95184af108c5c3",
+    "tokens": 1870,
+    "lastUpdated": "2025-02-05T19:23:38.472Z"
+  },
+  "src\\server\\api\\routers\\permission.ts": {
+    "hash": "3064b3b8e736c7d7cebb78a1d2a03ca8",
+    "tokens": 1742,
+    "lastUpdated": "2025-02-05T19:23:38.577Z"
+  },
+  "src\\server\\api\\routers\\role.ts": {
+    "hash": "fbc1e7f7bbef543a6571223557680ec9",
+    "tokens": 2575,
+    "lastUpdated": "2025-02-05T19:23:38.697Z"
+  },
+  "src\\server\\api\\routers\\types.ts": {
+    "hash": "b62439daa3ed59f8748330f113587b5a",
+    "tokens": 246,
+    "lastUpdated": "2025-02-05T19:23:38.771Z"
+  },
+  "src\\server\\api\\routers\\user.ts": {
+    "hash": "528f96c98522200449f8e0d9894f2fd6",
+    "tokens": 1494,
+    "lastUpdated": "2025-02-05T19:23:38.905Z"
+  },
+  "src\\server\\api\\trpc.ts": {
+    "hash": "038f3afe820488727b0313309a5339ec",
+    "tokens": 1584,
+    "lastUpdated": "2025-02-05T19:23:39.014Z"
+  },
+  "src\\server\\db.ts": {
+    "hash": "32532ad7624a1d810507b894c3d4d957",
+    "tokens": 119,
+    "lastUpdated": "2025-02-05T19:23:39.151Z"
+  },
+  "src\\trpc\\query-client.ts": {
+    "hash": "a4227a353e0d6f50c64a194e2ee5f774",
+    "tokens": 170,
+    "lastUpdated": "2025-02-05T19:23:39.249Z"
+  },
+  "src\\trpc\\react.tsx": {
+    "hash": "a31e35aee166bf164647631f0d3220e9",
+    "tokens": 531,
+    "lastUpdated": "2025-02-05T19:23:39.344Z"
+  },
+  "src\\trpc\\shared.ts": {
+    "hash": "7599a49e5091aef97ad0abfdefe35378",
+    "tokens": 215,
+    "lastUpdated": "2025-02-05T19:23:39.455Z"
+  },
+  "src\\utils\\supabase\\client.ts": {
+    "hash": "4bf64f6cf9ca6e52cb930e6b49623b7e",
+    "tokens": 47,
+    "lastUpdated": "2025-02-05T19:23:39.567Z"
+  },
+  "src\\utils\\supabase\\server.ts": {
+    "hash": "383b4aa97539ec665d9794c2cb3f7c76",
+    "tokens": 173,
+    "lastUpdated": "2025-02-05T19:23:39.674Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\app\\admin\\dashboard\\page.tsx": {
+    "hash": "1bcdca8e4c197b0efcecbf2c8b68497e",
+    "tokens": 235,
+    "lastUpdated": "2025-02-07T00:54:03.948Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\app\\api\\trpc\\[trpc]\\route.ts": {
+    "hash": "ef8c88077df38831424727380152d68d",
+    "tokens": 234,
+    "lastUpdated": "2025-02-07T00:54:03.951Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\components\\admin\\admin-dashboard.tsx": {
+    "hash": "d1545530fd46d0072818e9a3efc92cbd",
+    "tokens": 828,
+    "lastUpdated": "2025-02-07T00:54:03.954Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\components\\common\\loading.tsx": {
+    "hash": "039c9c3c5d99905417d7ccf14bb5b302",
+    "tokens": 272,
+    "lastUpdated": "2025-02-07T00:54:03.956Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\hooks\\use-auth.ts": {
+    "hash": "43209e24124d468434473462ce89ef7e",
+    "tokens": 913,
+    "lastUpdated": "2025-02-07T00:54:03.960Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\env.ts": {
+    "hash": "d7a02ee3fa650c24675749300a6925ca",
+    "tokens": 347,
+    "lastUpdated": "2025-02-07T00:54:03.962Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\root.ts": {
+    "hash": "9d3853ccbf6c68ff9ca09a547705d971",
+    "tokens": 274,
+    "lastUpdated": "2025-02-07T00:54:03.963Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\trpc.ts": {
+    "hash": "038f3afe820488727b0313309a5339ec",
+    "tokens": 1584,
+    "lastUpdated": "2025-02-07T00:54:03.967Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\components\\admin\\admin-content.tsx": {
+    "hash": "1ea6360235cb4f38e378793d8d7250ef",
+    "tokens": 1597,
+    "lastUpdated": "2025-02-07T00:54:03.970Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\components\\common\\conditional-content.tsx": {
+    "hash": "da32a57b31869dd0ca8baccc1870c563",
+    "tokens": 321,
+    "lastUpdated": "2025-02-07T00:54:03.972Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\lib\\schema\\models\\action.model.ts": {
+    "hash": "e3780b266da61f9567bc1217b2234fa4",
+    "tokens": 339,
+    "lastUpdated": "2025-02-07T00:54:03.974Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\lib\\schema\\models\\feature.model.ts": {
+    "hash": "4a70e57ca2dcd9c45a180049b25470a6",
+    "tokens": 339,
+    "lastUpdated": "2025-02-07T00:54:03.975Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\lib\\schema\\models\\permission.model.ts": {
+    "hash": "580166d0ba409aab997dfd868dced0b9",
+    "tokens": 348,
+    "lastUpdated": "2025-02-07T00:54:03.977Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\lib\\schema\\models\\role.model.ts": {
+    "hash": "d43228d0d5963a43a8c67833154558fe",
+    "tokens": 339,
+    "lastUpdated": "2025-02-07T00:54:03.978Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\lib\\schema\\models\\user-profile.model.ts": {
+    "hash": "9a43d2ddd97f33b59d8222cc444537f8",
+    "tokens": 411,
+    "lastUpdated": "2025-02-07T00:54:03.979Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\trpc\\react.tsx": {
+    "hash": "a31e35aee166bf164647631f0d3220e9",
+    "tokens": 531,
+    "lastUpdated": "2025-02-07T00:54:03.981Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\utils\\supabase\\client.ts": {
+    "hash": "4bf64f6cf9ca6e52cb930e6b49623b7e",
+    "tokens": 47,
+    "lastUpdated": "2025-02-07T00:54:03.982Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\routers\\action.ts": {
+    "hash": "8af4b37a9f21a36a932b22035df6f1bf",
+    "tokens": 787,
+    "lastUpdated": "2025-02-07T00:54:03.984Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\routers\\feature.ts": {
+    "hash": "04a642f6a16d8b0c9db63bba2aa26182",
+    "tokens": 962,
+    "lastUpdated": "2025-02-07T00:54:03.987Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\routers\\permission-group.ts": {
+    "hash": "72247c861d5052c4567857506c3b863b",
+    "tokens": 2725,
+    "lastUpdated": "2025-02-07T00:54:03.992Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\routers\\permission-override.ts": {
+    "hash": "de55ad22caef782ccf95184af108c5c3",
+    "tokens": 1870,
+    "lastUpdated": "2025-02-07T00:54:03.996Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\routers\\permission.ts": {
+    "hash": "3064b3b8e736c7d7cebb78a1d2a03ca8",
+    "tokens": 1742,
+    "lastUpdated": "2025-02-07T00:54:04.000Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\routers\\role.ts": {
+    "hash": "fbc1e7f7bbef543a6571223557680ec9",
+    "tokens": 2575,
+    "lastUpdated": "2025-02-07T00:54:04.005Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\routers\\user.ts": {
+    "hash": "528f96c98522200449f8e0d9894f2fd6",
+    "tokens": 1494,
+    "lastUpdated": "2025-02-07T00:54:04.009Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\db.ts": {
+    "hash": "32532ad7624a1d810507b894c3d4d957",
+    "tokens": 119,
+    "lastUpdated": "2025-02-07T00:54:04.011Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\utils\\supabase\\server.ts": {
+    "hash": "383b4aa97539ec665d9794c2cb3f7c76",
+    "tokens": 173,
+    "lastUpdated": "2025-02-07T00:54:04.012Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\components\\admin\\audit-log-viewer.tsx": {
+    "hash": "141a9ae0ac22fb9ecf716a9843dfe78c",
+    "tokens": 1431,
+    "lastUpdated": "2025-02-07T00:54:04.015Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\components\\admin\\permission-groups.tsx": {
+    "hash": "439dfec946b244eb609648ba4482e12c",
+    "tokens": 5761,
+    "lastUpdated": "2025-02-07T00:54:04.025Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\components\\admin\\permission-matrix.tsx": {
+    "hash": "1ecf41bd40ff39b22de28d07ecdd896a",
+    "tokens": 1722,
+    "lastUpdated": "2025-02-07T00:54:04.029Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\components\\admin\\role-management.tsx": {
+    "hash": "f95eb8c85a725ef779ec9f42c041805c",
+    "tokens": 1857,
+    "lastUpdated": "2025-02-07T00:54:04.033Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\components\\admin\\user-management.tsx": {
+    "hash": "18ed2352acbba4f2c8c7aa63cf4d9e1f",
+    "tokens": 1791,
+    "lastUpdated": "2025-02-07T00:54:04.036Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\trpc\\query-client.ts": {
+    "hash": "a4227a353e0d6f50c64a194e2ee5f774",
+    "tokens": 170,
+    "lastUpdated": "2025-02-07T00:54:04.038Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\server\\api\\routers\\types.ts": {
+    "hash": "b62439daa3ed59f8748330f113587b5a",
+    "tokens": 246,
+    "lastUpdated": "2025-02-07T00:54:04.039Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\trpc\\shared.ts": {
+    "hash": "7599a49e5091aef97ad0abfdefe35378",
+    "tokens": 215,
+    "lastUpdated": "2025-02-07T00:54:04.041Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\lib\\schema\\models\\role-audit-log.model.ts": {
+    "hash": "09dcddf771dda2375db6f5354d7ed216",
+    "tokens": 407,
+    "lastUpdated": "2025-02-07T00:54:04.042Z"
+  },
+  "..\\nextjs-supabase-starter\\src\\hooks\\use-toast.ts": {
+    "hash": "23f3f1928207fb53866873df6c6d93dd",
+    "tokens": 1044,
+    "lastUpdated": "2025-02-07T00:54:04.045Z"
+  },
+  "..\\nextjs-supabase-starter\\README.md": {
+    "hash": "60629000afbb9b754d862f14ae64bffc",
+    "tokens": 962,
+    "lastUpdated": "2025-02-07T00:54:04.047Z"
+  },
+  "..\\nextjs-supabase-starter\\package.json": {
+    "hash": "8a7c8eb0b600116c67a67960a05cd7a5",
+    "tokens": 1043,
+    "lastUpdated": "2025-02-07T00:54:04.049Z"
+  }
+}

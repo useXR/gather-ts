@@ -1,7 +1,7 @@
-import { ICompileOptions } from '@/types/compiler';
-import { ILogger, IValidator } from '@/utils';
-import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
-import { IService } from '@/types/services';
+import { ICompileOptions } from "@/types/compiler";
+import { ILogger, IValidator } from "@/utils";
+import { IFileSystem } from "@/utils/filesystem/interfaces/IFileSystem";
+import { IService } from "@/types/services";
 
 export interface IArgumentParserDeps {
   logger: ILogger;

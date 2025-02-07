@@ -33,7 +33,7 @@ export class CLI extends EventEmitter implements ICLI {
       argumentParser: IArgumentParser;
       fileSystem: IFileSystem;
     },
-    options: ICLIOptions = {}
+    options: ICLIOptions = {},
   ) {
     super();
     this.debug = options.debug || false;
@@ -122,25 +122,25 @@ export class CLI extends EventEmitter implements ICLI {
     this.on("progress", ({ phase, completed, total, message }) => {
       const percentage = Math.round((completed / total) * 100);
       this.deps.logger.info(
-        `${phase}: ${percentage}% (${completed}/${total}) ${message || ""}`
+        `${phase}: ${percentage}% (${completed}/${total}) ${message || ""}`,
       );
     });
   }
 
   private async generateDefaultConfig(
-    projectRoot: string
+    projectRoot: string,
   ): Promise<ICLIResult> {
     this.logDebug("Generating default configuration");
 
     try {
       this.deps.logger.info(
-        "No deppack.config.json found. Creating one with default settings..."
+        "No gather-ts.config.json found. Creating one with default settings...",
       );
 
       await this.deps.configManager.initialize();
 
       this.deps.logger.success(
-        "Created default configuration file: deppack.config.json"
+        "Created default configuration file: gather-ts.config.json",
       );
 
       return {
@@ -150,7 +150,7 @@ export class CLI extends EventEmitter implements ICLI {
       };
     } catch (error) {
       this.deps.logger.warn(
-        "Could not create default config file. Using default settings."
+        "Could not create default config file. Using default settings.",
       );
       return {
         success: false,
@@ -197,11 +197,11 @@ export class CLI extends EventEmitter implements ICLI {
     try {
       // Parse command line arguments
       const compileOptions = this.deps.argumentParser.parseArguments(
-        process.argv.slice(2)
+        process.argv.slice(2),
       );
 
       const projectRoot = this.validateRoot(
-        compileOptions.rootDir || process.cwd()
+        compileOptions.rootDir || process.cwd(),
       );
 
       this.emit("command:start", {
@@ -234,7 +234,7 @@ export class CLI extends EventEmitter implements ICLI {
       }
 
       // Forward progress events from compiler
-      this.deps.compiler.on("progress", (progress) => {
+      this.deps.compiler.on("progress", progress => {
         this.emit("progress", progress);
       });
 
@@ -248,10 +248,10 @@ export class CLI extends EventEmitter implements ICLI {
       this.deps.logger.success(`\nAnalysis complete!`);
       this.deps.logger.info(`Files processed: ${result.filesProcessed}`);
       this.deps.logger.info(
-        `Tokens analyzed: ${result.totalTokens.toLocaleString()}`
+        `Tokens analyzed: ${result.totalTokens.toLocaleString()}`,
       );
       this.deps.logger.info(
-        `Output: ${path.relative(projectRoot, result.outputPath)}`
+        `Output: ${path.relative(projectRoot, result.outputPath)}`,
       );
 
       // Show metrics if enabled
@@ -261,7 +261,7 @@ export class CLI extends EventEmitter implements ICLI {
         this.deps.logger.info("------------------");
         this.deps.logger.info(`Processing Time: ${metrics.processingTime}ms`);
         this.deps.logger.info(
-          `Memory Usage: ${(metrics.memoryUsage / 1024 / 1024).toFixed(2)}MB`
+          `Memory Usage: ${(metrics.memoryUsage / 1024 / 1024).toFixed(2)}MB`,
         );
         this.deps.logger.info(`Files: ${metrics.filesProcessed}`);
         this.deps.logger.info(`Errors: ${metrics.errors}`);
@@ -270,7 +270,7 @@ export class CLI extends EventEmitter implements ICLI {
 
       // Check for warnings
       const warning = this.deps.configManager.getTokenWarning(
-        result.totalTokens
+        result.totalTokens,
       );
       if (warning) {
         this.emit("warning", {
@@ -349,14 +349,14 @@ async function main() {
     // Resolve and type cast services properly
     const logger = container.resolve<ILogger>(ServiceTokens.LOGGER);
     const configManager = container.resolve<IConfigManager>(
-      ServiceTokens.CONFIG_MANAGER
+      ServiceTokens.CONFIG_MANAGER,
     );
     const compiler = container.resolve<ICompileContext>(ServiceTokens.COMPILER);
     const argumentParser = container.resolve<IArgumentParser>(
-      ServiceTokens.ARGUMENT_PARSER
+      ServiceTokens.ARGUMENT_PARSER,
     );
     const fileSystem = container.resolve<IFileSystem>(
-      ServiceTokens.FILE_SYSTEM
+      ServiceTokens.FILE_SYSTEM,
     );
 
     if (debug) {
@@ -383,7 +383,7 @@ async function main() {
       {
         debug,
         exitOnError: true,
-      }
+      },
     );
 
     await cli.initialize();
@@ -412,7 +412,7 @@ async function main() {
 
 // Make sure main is called correctly
 if (require.main === module) {
-  main().catch((error) => {
+  main().catch(error => {
     console.error("Fatal error:", error);
     process.exit(1);
   });

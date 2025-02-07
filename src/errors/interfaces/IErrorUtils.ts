@@ -13,14 +13,14 @@ export interface IErrorUtilsOptions {
 }
 
 export interface IErrorUtils extends IService {
-  isDeppackError(error: unknown): error is IBaseError;
+  isGatherTSError(error: unknown): error is IBaseError;
   wrapError(error: unknown, context: string): Error;
   formatErrorDetails(details: IErrorDetails): string;
   aggregateErrors(errors: Error[]): Error;
   classifyError(error: unknown): IErrorClassification;
   transformError(
     error: unknown,
-    transformations: IErrorTransformation[]
+    transformations: IErrorTransformation[],
   ): Error;
   extractErrorContext(error: Error): Record<string, unknown>;
   normalizeError(error: unknown): Error;

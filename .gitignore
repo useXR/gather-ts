@@ -1,6 +1,6 @@
-.deppack
+.gather-ts
 node_modules
 dist
-.deppackignore
-deppack.config.json
+.gather-ts-ignore
+gather-ts.config.json
 repomix-output.txt

@@ -1,17 +1,17 @@
 // src/core/tokenization/TokenCache.ts
 
 import crypto from "crypto";
-import { FileSystemError, ValidationError, CacheError } from '@/errors';
-import { 
-  ITokenCache, 
-  ICacheEntry, 
+import { FileSystemError, ValidationError, CacheError } from "@/errors";
+import {
+  ITokenCache,
+  ICacheEntry,
   ICacheStats,
   ITokenCacheDeps,
-  ITokenCacheOptions 
-} from './interfaces/ITokenCache';
-import { BaseService } from "@/types/services"
+  ITokenCacheOptions,
+} from "./interfaces/ITokenCache";
+import { BaseService } from "@/types/services";
 
-export type CacheOperation = 'read' | 'write' | 'delete' | 'clear' | 'expire';
+export type CacheOperation = "read" | "write" | "delete" | "clear" | "expire";
 
 export class TokenCache extends BaseService implements ITokenCache {
   private readonly cachePath: string;
@@ -26,29 +26,35 @@ export class TokenCache extends BaseService implements ITokenCache {
     totalSize: 0,
     hitCount: 0,
     missCount: 0,
-    invalidations: 0
+    invalidations: 0,
   };
 
   constructor(
     projectRoot: string,
     private readonly deps: ITokenCacheDeps,
-    options: ITokenCacheOptions = {}
+    options: ITokenCacheOptions = {},
   ) {
     super();
     this.projectRoot = projectRoot;
     this.maxCacheAge = options.maxCacheAge || 7 * 24 * 60 * 60 * 1000; // 7 days default
     this.debug = options.debug || false;
-    this.cachePath = this.deps.fileSystem.joinPath(projectRoot, ".deppack", "token-cache.json");
+    this.cachePath = this.deps.fileSystem.joinPath(
+      projectRoot,
+      ".gather-ts",
+      "token-cache.json",
+    );
   }
 
   public override async initialize(): Promise<void> {
-    this.logDebug('Initializing TokenCache');
-    
+    this.logDebug("Initializing TokenCache");
+
     try {
       await super.initialize();
-      
+
       if (!this.deps.fileSystem.exists(this.projectRoot)) {
-        throw new ValidationError("Project root does not exist", { projectRoot: this.projectRoot });
+        throw new ValidationError("Project root does not exist", {
+          projectRoot: this.projectRoot,
+        });
       }
 
       await this.initializeCachePath();
@@ -56,7 +62,7 @@ export class TokenCache extends BaseService implements ITokenCache {
     } catch (error) {
       throw new CacheError(
         `Failed to initialize TokenCache: ${error instanceof Error ? error.message : String(error)}`,
-        'write'
+        "write",
       );
     }
   }
@@ -71,13 +77,13 @@ export class TokenCache extends BaseService implements ITokenCache {
     } catch (error) {
       throw new CacheError(
         `Failed to initialize cache path: ${error instanceof Error ? error.message : String(error)}`,
-        'initialize'
+        "initialize",
       );
     }
   }
 
   public cleanup(): void {
-    this.logDebug('Cleaning up TokenCache');
+    this.logDebug("Cleaning up TokenCache");
     this.saveCache();
     super.cleanup();
   }
@@ -91,9 +97,9 @@ export class TokenCache extends BaseService implements ITokenCache {
   private handleError(operation: string, error: unknown, key?: string): never {
     const message = error instanceof Error ? error.message : String(error);
     const cacheError = new CacheError(
-      `Cache ${operation} failed: ${message}`, 
-      operation as 'read' | 'write' | 'delete' | 'clear',
-      key
+      `Cache ${operation} failed: ${message}`,
+      operation as "read" | "write" | "delete" | "clear",
+      key,
     );
     this.deps.logger.error(cacheError.message);
     throw cacheError;
@@ -154,11 +160,11 @@ export class TokenCache extends BaseService implements ITokenCache {
         this.updateStats();
         this.logDebug(
           `Loaded ${Object.keys(this.cache).length} valid cache entries ` +
-          `(${expiredCount} expired, ${invalidCount} invalid)`
+            `(${expiredCount} expired, ${invalidCount} invalid)`,
         );
       }
     } catch (error) {
-      this.handleError('read', error);
+      this.handleError("read", error);
     }
   }
 
@@ -166,11 +172,11 @@ export class TokenCache extends BaseService implements ITokenCache {
     try {
       await this.deps.fileSystem.writeFile(
         this.cachePath,
-        JSON.stringify(this.cache, null, 2)
+        JSON.stringify(this.cache, null, 2),
       );
       this.logDebug(`Saved ${Object.keys(this.cache).length} cache entries`);
     } catch (error) {
-      this.handleError('write', error);
+      this.handleError("write", error);
     }
   }
 
@@ -178,7 +184,7 @@ export class TokenCache extends BaseService implements ITokenCache {
     try {
       return crypto.createHash("md5").update(content).digest("hex");
     } catch (error) {
-      this.handleError('hash', error);
+      this.handleError("hash", error);
     }
   }
 
@@ -207,17 +213,24 @@ export class TokenCache extends BaseService implements ITokenCache {
       this.stats.missCount++;
       return null;
     } catch (error) {
-      this.handleError('read', error, filePath);
+      this.handleError("read", error, filePath);
     }
   }
 
-  public cacheTokenCount(filePath: string, content: string, tokens: number): void {
+  public cacheTokenCount(
+    filePath: string,
+    content: string,
+    tokens: number,
+  ): void {
     if (!filePath || typeof filePath !== "string") {
       throw new ValidationError("Invalid file path provided", { filePath });
     }
 
     if (typeof tokens !== "number" || isNaN(tokens) || tokens < 0) {
-      throw new ValidationError("Invalid token count provided", { filePath, tokens });
+      throw new ValidationError("Invalid token count provided", {
+        filePath,
+        tokens,
+      });
     }
 
     try {
@@ -225,7 +238,7 @@ export class TokenCache extends BaseService implements ITokenCache {
       const entry: ICacheEntry = {
         hash: this.computeHash(content),
         tokens,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       };
 
       this.cache[relativePath] = entry;
@@ -233,7 +246,7 @@ export class TokenCache extends BaseService implements ITokenCache {
       this.saveCache();
       this.logDebug(`Cached ${tokens} tokens for ${relativePath}`);
     } catch (error) {
-      this.handleError('write', error, filePath);
+      this.handleError("write", error, filePath);
     }
   }
 
@@ -243,10 +256,10 @@ export class TokenCache extends BaseService implements ITokenCache {
       this.updateStats();
       if (this.deps.fileSystem.exists(this.cachePath)) {
         this.deps.fileSystem.deleteFile(this.cachePath);
-        this.logDebug('Cleared cache file');
+        this.logDebug("Cleared cache file");
       }
     } catch (error) {
-      this.handleError('clear', error);
+      this.handleError("clear", error);
     }
   }
 
@@ -255,15 +268,17 @@ export class TokenCache extends BaseService implements ITokenCache {
     let oldestDate = Date.now();
     let newestDate = 0;
 
-    entries.forEach((entry) => {
+    entries.forEach(entry => {
       const timestamp = Date.parse(entry.lastUpdated);
       oldestDate = Math.min(oldestDate, timestamp);
       newestDate = Math.max(newestDate, timestamp);
     });
 
     this.stats.totalEntries = entries.length;
-    this.stats.oldestEntry = entries.length > 0 ? new Date(oldestDate).toISOString() : null;
-    this.stats.newestEntry = entries.length > 0 ? new Date(newestDate).toISOString() : null;
+    this.stats.oldestEntry =
+      entries.length > 0 ? new Date(oldestDate).toISOString() : null;
+    this.stats.newestEntry =
+      entries.length > 0 ? new Date(newestDate).toISOString() : null;
     this.stats.totalSize = Buffer.byteLength(JSON.stringify(this.cache));
   }
 

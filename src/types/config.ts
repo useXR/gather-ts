@@ -1,5 +1,5 @@
-import { TiktokenModel } from './models/tokenizer';
-import { DeepPartial } from './common';
+import { TiktokenModel } from "./models/tokenizer";
+import { DeepPartial } from "./common";
 
 export interface ITokenizerConfig {
   model: TiktokenModel;
@@ -12,7 +12,7 @@ export interface IOutputConfig {
   includeSummaryInFile: boolean;
   includeGenerationTime: boolean;
   includeUsageGuidelines: boolean;
-  format?: 'json' | 'text' | 'markdown';
+  format?: "json" | "text" | "markdown";
 }
 
 export interface ICustomText {
@@ -23,7 +23,7 @@ export interface ICustomText {
   beforeFiles?: string;
 }
 
-export interface IDeppackConfig {
+export interface IGatherTSConfig {
   maxDepth?: number;
   topFilesCount: number;
   showTokenCount: boolean;
@@ -35,7 +35,7 @@ export interface IDeppackConfig {
   customText?: ICustomText;
 }
 
-export type ConfigOverrides = DeepPartial<IDeppackConfig>;
+export type ConfigOverrides = DeepPartial<IGatherTSConfig>;
 
 export interface IConfigValidationResult {
   isValid: boolean;
@@ -44,7 +44,7 @@ export interface IConfigValidationResult {
 }
 
 export interface IConfigLoadResult {
-  config: IDeppackConfig;
-  source: 'file' | 'default' | 'override';
+  config: IGatherTSConfig;
+  source: "file" | "default" | "override";
   validation: IConfigValidationResult;
 }

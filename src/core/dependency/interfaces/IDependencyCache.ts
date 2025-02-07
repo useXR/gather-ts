@@ -1,8 +1,8 @@
 // src/core/dependency/interfaces/IDependencyCache.ts
 
-import { IService } from '@/types/services';
-import { ILogger } from '@/utils/logging/interfaces/ILogger';
-import { IDependencyMap } from 'dependency';
+import { IService } from "@/types/services";
+import { ILogger } from "@/utils/logging/interfaces/ILogger";
+import { IDependencyMap } from "dependency";
 
 export interface IDependencyCacheDeps {
   logger: ILogger;
@@ -36,7 +36,11 @@ export interface IDependencyCacheStats {
 
 export interface IDependencyCache extends IService {
   get(key: string, options?: ICacheOperationOptions): IDependencyMap | null;
-  set(key: string, dependencies: IDependencyMap, options?: ICacheOperationOptions): void;
+  set(
+    key: string,
+    dependencies: IDependencyMap,
+    options?: ICacheOperationOptions,
+  ): void;
   delete(key: string): void;
   clear(): void;
   has(key: string): boolean;

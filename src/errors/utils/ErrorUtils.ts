@@ -1,25 +1,24 @@
 // src/errors/utils/ErrorUtils.ts
 
 import {
-  IErrorDetails,
-  IBaseError,
   IErrorClassification,
   IErrorTransformation,
 } from "../interfaces/IError";
-import { DeppackError } from "../exceptions";
+import { GatherTSError } from "../exceptions";
 import {
   IErrorUtils,
   IErrorUtilsDeps,
   IErrorUtilsOptions,
 } from "../interfaces/IErrorUtils";
-import { BaseService } from "@/types/services"
+import { BaseService } from "@/types/services";
+import { IBaseError, IErrorDetails } from "@/types/errors";
 
 export class ErrorUtils extends BaseService implements IErrorUtils {
   private readonly debug: boolean;
 
   constructor(
     private readonly deps: IErrorUtilsDeps,
-    options: IErrorUtilsOptions = {}
+    options: IErrorUtilsOptions = {},
   ) {
     super();
     this.debug = options.debug || false;
@@ -41,13 +40,13 @@ export class ErrorUtils extends BaseService implements IErrorUtils {
     }
   }
 
-  public isDeppackError(error: unknown): error is IBaseError {
+  public isGatherTSError(error: unknown): error is IBaseError {
     this.checkInitialized();
-    return error instanceof DeppackError;
+    return error instanceof GatherTSError;
   }
 
   public wrapError(error: unknown, context: string): Error {
-    if (error instanceof DeppackError) {
+    if (error instanceof GatherTSError) {
       return error;
     }
 
@@ -107,7 +106,7 @@ export class ErrorUtils extends BaseService implements IErrorUtils {
       stackTrace: undefined,
     };
 
-    if (error instanceof DeppackError) {
+    if (error instanceof GatherTSError) {
       return {
         ...baseClassification,
         type: error.name,
@@ -134,7 +133,7 @@ export class ErrorUtils extends BaseService implements IErrorUtils {
 
   public transformError(
     error: unknown,
-    transformations: IErrorTransformation[]
+    transformations: IErrorTransformation[],
   ): Error {
     let transformed = error instanceof Error ? error : new Error(String(error));
 
@@ -153,7 +152,7 @@ export class ErrorUtils extends BaseService implements IErrorUtils {
       message: error.message,
     };
 
-    if (error instanceof DeppackError && error.details) {
+    if (error instanceof GatherTSError && error.details) {
       context.details = error.details;
     }
 

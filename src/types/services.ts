@@ -1,7 +1,7 @@
 // src/types/services.ts
 
 import { ICompileOptions, ICompileResult } from "compiler";
-import { IDeppackConfig, IConfigValidationResult } from "config";
+import { IGatherTSConfig, IConfigValidationResult } from "config";
 import { IFileWithContent } from "files";
 import { ISummaryStats } from "stats";
 
@@ -24,16 +24,16 @@ export interface ITokenizationService extends IService {
 }
 
 export interface IConfigurationService extends IService {
-  validateConfig(config: Partial<IDeppackConfig>): IConfigValidationResult;
-  loadConfig(configPath: string): Promise<IDeppackConfig>;
-  saveConfig(config: IDeppackConfig, configPath: string): Promise<void>;
-  getDefaultConfig(): IDeppackConfig;
+  validateConfig(config: Partial<IGatherTSConfig>): IConfigValidationResult;
+  loadConfig(configPath: string): Promise<IGatherTSConfig>;
+  saveConfig(config: IGatherTSConfig, configPath: string): Promise<void>;
+  getDefaultConfig(): IGatherTSConfig;
 }
 
 export interface IDependencyService extends IService {
   analyzeDependencies(
     entryFile: string,
-    projectRoot: string
+    projectRoot: string,
   ): Promise<string[]>;
   validateEntryPoints(entryFiles: string[]): Promise<boolean>;
   getDependencyGraph(): Promise<Map<string, string[]>>;

@@ -1,22 +1,11 @@
 // src/errors/interfaces/IError.ts
 
-import { IService } from '@/types/services';
-import { ILogger } from '@/utils/logging/interfaces/ILogger';
-import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
-import { IErrorUtils } from './IErrorUtils';
+import { IErrorDetails } from "@/types/errors";
 
-// Common types
-export interface IErrorDetails {
-  [key: string]: unknown;
-}
-
-export interface IBaseError extends Error {
-  readonly details?: IErrorDetails;
-}
 
 export interface IErrorClassification {
   type: string;
-  severity: 'error' | 'warning' | 'info';
+  severity: "error" | "warning" | "info";
   message: string;
   details?: IErrorDetails;
   stackTrace?: string;

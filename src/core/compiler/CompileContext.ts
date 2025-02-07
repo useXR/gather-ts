@@ -4,13 +4,13 @@ import { EventEmitter } from "events";
 import { ValidationError } from "@/errors";
 import { IFileInfo, IFileWithContent } from "@/types/files";
 import {
-  CompilePhase,
-  ICompileContext,
   ICompileMetrics,
   ICompileOptions,
   ICompileResult,
-} from "compiler";
+} from "@/types/compiler";
 import {
+  CompilePhase,
+  ICompileContext,
   ICompileContextDeps,
   ICompileContextOptions,
   ICompileFileOptions,
@@ -53,7 +53,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
 
   constructor(
     private readonly deps: ICompileContextDeps,
-    options: ICompileContextOptions = {}
+    options: ICompileContextOptions = {},
   ) {
     super();
     this.debug = options.debug || false;
@@ -153,7 +153,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
   private emitProgress(
     completed: number,
     total: number,
-    message?: string
+    message?: string,
   ): void {
     if (!this.currentPhase) return;
 
@@ -167,7 +167,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
 
   private async executePhase<T>(
     phase: CompilePhase,
-    executor: () => Promise<T>
+    executor: () => Promise<T>,
   ): Promise<T> {
     const startTime = Date.now();
     this.currentPhase = phase;
@@ -221,7 +221,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
       const entryFiles = await this.executePhase("initialization", async () => {
         return await this.deps.dependencyAnalyzer.validateEntryFiles(
           options.entryFiles,
-          rootDir
+          rootDir,
         );
       });
 
@@ -232,7 +232,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
           const startTime = Date.now();
           const result = await this.deps.dependencyAnalyzer.analyzeDependencies(
             entryFiles,
-            rootDir
+            rootDir,
           );
 
           this.updateMetrics({
@@ -240,7 +240,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
           });
 
           return result;
-        }
+        },
       );
 
       // Gather relevant files
@@ -250,21 +250,21 @@ export class CompileContext extends EventEmitter implements ICompileContext {
           const files = await this.deps.dependencyAnalyzer.gatherDependencies(
             dependencyAnalysis.dependencies,
             entryFiles,
-            options.maxDepth
+            options.maxDepth,
           );
 
-          return files.map((file) => ({
+          return files.map(file => ({
             absolute: file,
             relative: this.deps.fileSystem.getRelativePath(rootDir, file),
             path: this.deps.fileSystem.getRelativePath(rootDir, file),
           }));
-        }
+        },
       );
 
       // Process required files
       const processedFiles = await this.processRequiredFiles(
         relevantFiles,
-        rootDir
+        rootDir,
       );
 
       // Read file contents
@@ -273,9 +273,8 @@ export class CompileContext extends EventEmitter implements ICompileContext {
       // Generate token summary
       const stats = await this.executePhase("tokenization", async () => {
         const startTime = Date.now();
-        const result = await this.deps.tokenCounter.generateSummary(
-          filesWithContent
-        );
+        const result =
+          await this.deps.tokenCounter.generateSummary(filesWithContent);
 
         this.updateMetrics({
           tokenizationTime: Date.now() - startTime,
@@ -292,7 +291,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
         const result = await this.generateOutput(
           filesWithContent,
           this.deps.configManager,
-          options.maxDepth
+          options.maxDepth,
         );
 
         this.updateMetrics({
@@ -305,7 +304,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
       // Ensure output directory exists
       await this.deps.fileSystem.createDirectory(
         path.dirname(options.outputFile),
-        true
+        true,
       );
 
       // Write output file
@@ -342,7 +341,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
 
   private async processRequiredFiles(
     relativeFiles: IFileInfo[],
-    rootDir: string
+    rootDir: string,
   ): Promise<IFileInfo[]> {
     this.logDebug("Processing required files");
 
@@ -351,22 +350,22 @@ export class CompileContext extends EventEmitter implements ICompileContext {
 
     if (config.requiredFiles?.length) {
       this.logDebug(
-        `Found ${config.requiredFiles.length} required files in config`
+        `Found ${config.requiredFiles.length} required files in config`,
       );
 
       for (const requiredFile of config.requiredFiles) {
         const absolutePath = this.deps.fileSystem.resolvePath(
           rootDir,
-          requiredFile
+          requiredFile,
         );
 
-        if (!processedFiles.some((f) => f.absolute === absolutePath)) {
+        if (!processedFiles.some(f => f.absolute === absolutePath)) {
           if (this.deps.fileSystem.exists(absolutePath)) {
             processedFiles.push({
               absolute: absolutePath,
               relative: this.deps.fileSystem.getRelativePath(
                 rootDir,
-                absolutePath
+                absolutePath,
               ),
               path: this.deps.fileSystem.getRelativePath(rootDir, absolutePath),
             });
@@ -385,12 +384,12 @@ export class CompileContext extends EventEmitter implements ICompileContext {
 
   private async loadFileContents(
     files: IFileInfo[],
-    options: ICompileFileOptions = {}
+    options: ICompileFileOptions = {},
   ): Promise<IFileWithContent[]> {
     this.logDebug(`Loading contents for ${files.length} files`);
 
     const result = await Promise.all(
-      files.map(async (file) => {
+      files.map(async file => {
         try {
           const content = await this.deps.fileSystem.readFile(file.absolute);
 
@@ -413,10 +412,10 @@ export class CompileContext extends EventEmitter implements ICompileContext {
             `Failed to read file: ${
               error instanceof Error ? error.message : String(error)
             }`,
-            { filePath: file.absolute }
+            { filePath: file.absolute },
           );
         }
-      })
+      }),
     );
 
     this.logDebug(`Loaded contents for ${result.length} files`);
@@ -434,7 +433,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
   private async generateOutput(
     filesWithContent: IFileWithContent[],
     configManager: IConfigManager,
-    maxDepth?: number
+    maxDepth?: number,
   ): Promise<string> {
     const generationTime = new Date().toISOString();
     const config = configManager.getConfig();
@@ -442,89 +441,102 @@ export class CompileContext extends EventEmitter implements ICompileContext {
 
     try {
       // Add main header
-      output.push(this.deps.templateManager.render('mainHeader', {
-        tool: 'Deppack',
-        date: generationTime
-      }));
+      output.push(
+        this.deps.templateManager.render("mainHeader", {
+          tool: "gather-ts",
+          date: generationTime,
+        }),
+      );
 
       // Add file summary
-      let customNotes = '';
+      let customNotes = "";
       if (config.customText?.beforeSummary) {
-        customNotes = '\n## Important Notes\n' + config.customText.beforeSummary;
+        customNotes =
+          "\n## Important Notes\n" + config.customText.beforeSummary;
       }
 
-      output.push(this.deps.templateManager.render('fileSummary', {
-        tool: 'Deppack',
-        customNotes
-      }));
+      output.push(
+        this.deps.templateManager.render("fileSummary", {
+          tool: "gather-ts",
+          customNotes,
+        }),
+      );
 
       // Add repository structure
-      const fileList = filesWithContent
-        .map(file => file.path)
-        .join('\n');
+      const fileList = filesWithContent.map(file => file.path).join("\n");
 
-      output.push(this.deps.templateManager.render('repositoryStructure', {
-        fileList
-      }));
+      output.push(
+        this.deps.templateManager.render("repositoryStructure", {
+          fileList,
+        }),
+      );
 
       // Add repository files header
-      output.push(this.deps.templateManager.render('repositoryFiles', {}));
+      output.push(this.deps.templateManager.render("repositoryFiles", {}));
 
       // Add each file
       let processed = 0;
       const total = filesWithContent.length;
 
       for (const file of filesWithContent) {
-        output.push(this.deps.templateManager.render('fileEntry', {
-          filePath: file.path,
-          fileContent: file.content
-        }));
+        output.push(
+          this.deps.templateManager.render("fileEntry", {
+            filePath: file.path,
+            fileContent: file.content,
+          }),
+        );
 
         processed++;
-        this.emit('progress', {
-          phase: 'output-generation',
+        this.emit("progress", {
+          phase: "output-generation",
           completed: processed,
           total,
-          message: `Processing ${file.path}`
+          message: `Processing ${file.path}`,
         });
       }
 
       // Add footer if configured
       if (config.customText?.footer) {
-        output.push('\n' + config.customText.footer);
+        output.push("\n" + config.customText.footer);
       }
 
-      const result = output.join('\n');
+      const result = output.join("\n");
 
       // Validate output contains all expected sections
       this.validateOutput(result);
 
       return result;
     } catch (error) {
-      this.deps.logger.error(`Failed to generate output: ${error instanceof Error ? error.message : String(error)}`);
-      throw new Error(`Output generation failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.deps.logger.error(
+        `Failed to generate output: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new Error(
+        `Output generation failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
-  
+
   private validateOutput(output: string): void {
     const requiredSections = [
-      'File Summary',
-      'Repository Structure',
-      'Repository Files'
+      "File Summary",
+      "Repository Structure",
+      "Repository Files",
     ];
 
     for (const section of requiredSections) {
       if (!output.includes(section)) {
-        throw new Error(`Generated output missing required section: ${section}`);
+        throw new Error(
+          `Generated output missing required section: ${section}`,
+        );
       }
     }
 
     // Validate basic structure
-    if (!output.includes('================')) {
-      throw new Error('Generated output missing file separators');
+    if (!output.includes("================")) {
+      throw new Error("Generated output missing file separators");
     }
 
-    this.logDebug('Output validation complete');
+    this.logDebug("Output validation complete");
   }
 
   private generateMetricsReport(): string {

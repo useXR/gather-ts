@@ -1,8 +1,8 @@
 // src/core/dependency/interfaces/IIgnoreHandler.ts
 
-import { IFileSystem } from '@/utils/filesystem/interfaces/IFileSystem';
-import { ILogger } from '@/utils/logging/interfaces/ILogger';
-import { IService } from '@/types/services';
+import { IFileSystem } from "@/utils/filesystem/interfaces/IFileSystem";
+import { ILogger } from "@/utils/logging/interfaces/ILogger";
+import { IService } from "@/types/services";
 
 export interface IIgnoreHandlerDeps {
   fileSystem: IFileSystem;

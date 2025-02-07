@@ -31,7 +31,7 @@ export interface IContainer extends IService {
   register<T extends IService>(token: IServiceIdentifier<T>, instance: T): void;
   registerFactory<T extends IService>(
     token: IServiceIdentifier<T>,
-    factory: IServiceFactory<T>
+    factory: IServiceFactory<T>,
   ): void;
   resolve<T extends IService>(token: IServiceIdentifier<T>): T;
   hasService(token: IServiceIdentifier): boolean;
@@ -39,24 +39,24 @@ export interface IContainer extends IService {
 
   on<K extends keyof IContainerEvents>(
     event: K,
-    listener: (data: IContainerEvents[K]) => void
+    listener: (data: IContainerEvents[K]) => void,
   ): this;
 
   off<K extends keyof IContainerEvents>(
     event: K,
-    listener: (data: IContainerEvents[K]) => void
+    listener: (data: IContainerEvents[K]) => void,
   ): this;
 
   emit<K extends keyof IContainerEvents>(
     event: K,
-    data: IContainerEvents[K]
+    data: IContainerEvents[K],
   ): boolean;
 }
 
 export interface IContainerConfiguration {
   configureContainer(
     rootDir: string,
-    options?: IContainerOptions
+    options?: IContainerOptions,
   ): Promise<IContainer>;
 }
 

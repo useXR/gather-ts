@@ -17,7 +17,7 @@ export class Logger extends BaseService implements ILogger {
 
   constructor(
     private readonly deps: ILoggerDeps,
-    options: ILoggerOptions = {}
+    options: ILoggerOptions = {},
   ) {
     super();
     this.colors = {
@@ -70,7 +70,7 @@ export class Logger extends BaseService implements ILogger {
   public info(message: string): void {
     if (!this.shouldLog("info")) return;
     const formattedMessage = this.formatWithTimestamp(
-      this.format("blue", "ℹ") + " " + message
+      this.format("blue", "ℹ") + " " + message,
     );
     this.deps.outputStream.write(formattedMessage + "\n");
   }
@@ -78,7 +78,7 @@ export class Logger extends BaseService implements ILogger {
   public success(message: string): void {
     if (!this.shouldLog("info")) return;
     const formattedMessage = this.formatWithTimestamp(
-      this.format("green", "✓") + " " + message
+      this.format("green", "✓") + " " + message,
     );
     this.deps.outputStream.write(formattedMessage + "\n");
   }
@@ -86,7 +86,7 @@ export class Logger extends BaseService implements ILogger {
   public warn(message: string): void {
     if (!this.shouldLog("warn")) return;
     const formattedMessage = this.formatWithTimestamp(
-      this.format("yellow", "⚠") + " " + message
+      this.format("yellow", "⚠") + " " + message,
     );
     this.deps.outputStream.write(formattedMessage + "\n");
   }
@@ -94,7 +94,7 @@ export class Logger extends BaseService implements ILogger {
   public error(message: string): void {
     if (!this.shouldLog("error")) return;
     const formattedMessage = this.formatWithTimestamp(
-      this.format("red", "✖") + " " + message
+      this.format("red", "✖") + " " + message,
     );
     this.deps.errorStream.write(formattedMessage + "\n");
   }
@@ -102,7 +102,7 @@ export class Logger extends BaseService implements ILogger {
   public debug(message: string): void {
     if (!this.debugEnabled || !this.shouldLog("debug")) return;
     const formattedMessage = this.formatWithTimestamp(
-      this.format("gray", "→") + " " + message
+      this.format("gray", "→") + " " + message,
     );
     this.deps.outputStream.write(formattedMessage + "\n");
   }
@@ -111,7 +111,7 @@ export class Logger extends BaseService implements ILogger {
     if (!this.shouldLog("info")) return;
     this.deps.outputStream.write("\n" + this.format("bright", title) + "\n");
     this.deps.outputStream.write(
-      this.format("dim", "─".repeat(title.length)) + "\n"
+      this.format("dim", "─".repeat(title.length)) + "\n",
     );
   }
 
@@ -122,7 +122,7 @@ export class Logger extends BaseService implements ILogger {
       this.deps.outputStream.write(
         this.format("gray", `${key.padStart(15)}: `) +
           this.format("bright", String(value)) +
-          "\n"
+          "\n",
       );
     });
   }

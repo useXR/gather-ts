@@ -6,7 +6,7 @@ export type DeepPartial<T> = {
 };
 
 // Common operation types
-export type Operation = 'read' | 'write' | 'create' | 'delete' | 'update';
+export type Operation = "read" | "write" | "create" | "delete" | "update";
 
 // Common result types
 export interface IResult<T> {

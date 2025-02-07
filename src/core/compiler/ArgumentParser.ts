@@ -18,7 +18,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
 
   constructor(
     private readonly deps: IArgumentParserDeps,
-    options: IArgumentParserOptions = {}
+    options: IArgumentParserOptions = {},
   ) {
     super();
     this.debug = options.debug || false;
@@ -44,7 +44,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
 
   public parseArguments(
     args: string[],
-    options: IParseOptions = {}
+    options: IParseOptions = {},
   ): ICompileOptions {
     this.checkInitialized();
     this.logDebug(`Parsing arguments: ${args.join(" ")}`);
@@ -72,7 +72,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
             }
             outputFile = this.parseOutputFile(
               restArgs[i],
-              options.requireOutput
+              options.requireOutput,
             );
             break;
 
@@ -101,7 +101,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
             }
             const batchSize = this.deps.validator.validateNotEmpty(
               restArgs[i],
-              "Batch size"
+              "Batch size",
             );
             const parsedBatchSize = parseInt(batchSize);
             if (isNaN(parsedBatchSize) || parsedBatchSize <= 0) {
@@ -118,7 +118,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
             }
             const configPath = this.deps.validator.validateNotEmpty(
               restArgs[i],
-              "Config path"
+              "Config path",
             );
             if (!this.deps.fileSystem.exists(configPath)) {
               throw new ValidationError(`Config file not found: ${configPath}`);
@@ -133,7 +133,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
             }
             const encoding = this.deps.validator.validateNotEmpty(
               restArgs[i],
-              "Encoding"
+              "Encoding",
             );
             if (!this.isValidEncoding(encoding)) {
               throw new ValidationError(`Invalid encoding: ${encoding}`);
@@ -144,7 +144,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
           case "--ignore":
             i++;
             compileOptions.ignorePatterns = this.parseIgnorePatterns(
-              restArgs.slice(i)
+              restArgs.slice(i),
             );
             i += (compileOptions.ignorePatterns?.length || 0) - 1;
             break;
@@ -152,7 +152,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
           case "--require":
             i++;
             compileOptions.requiredFiles = this.parseRequiredFiles(
-              restArgs.slice(i)
+              restArgs.slice(i),
             );
             i += (compileOptions.requiredFiles?.length || 0) - 1;
             break;
@@ -194,7 +194,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
       throw new ValidationError(
         `Failed to parse arguments: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     }
   }
@@ -203,22 +203,22 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
     this.logDebug(
       `Parsing entry files: ${filesArg} with root: ${
         rootDir || "not specified"
-      }`
+      }`,
     );
 
     this.deps.validator.validateNotEmpty(filesArg, "Entry files argument");
 
     const files = filesArg
       .split(",")
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0);
+      .map(f => f.trim())
+      .filter(f => f.length > 0);
 
     if (files.length === 0) {
       throw new ValidationError("No valid entry files provided");
     }
 
     // Validate each file exists
-    files.forEach((file) => {
+    files.forEach(file => {
       this.deps.validator.validatePath(file, "Entry file");
       const absolutePath = rootDir
         ? this.deps.fileSystem.resolvePath(rootDir, file)
@@ -255,7 +255,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
           throw new ValidationError(
             `Cannot create output directory: ${
               error instanceof Error ? error.message : String(error)
-            }`
+            }`,
           );
         }
       }
@@ -289,7 +289,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
           i++;
           const batchSize = this.deps.validator.validateNotEmpty(
             args[i],
-            "Batch size"
+            "Batch size",
           );
           const parsedBatchSize = parseInt(batchSize);
           if (isNaN(parsedBatchSize) || parsedBatchSize <= 0) {
@@ -303,7 +303,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
           i++;
           const configPath = this.deps.validator.validateNotEmpty(
             args[i],
-            "Config path"
+            "Config path",
           );
           if (!this.deps.fileSystem.exists(configPath)) {
             throw new ValidationError(`Config file not found: ${configPath}`);
@@ -315,7 +315,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
           i++;
           const encoding = this.deps.validator.validateNotEmpty(
             args[i],
-            "Encoding"
+            "Encoding",
           );
           if (!this.isValidEncoding(encoding)) {
             throw new ValidationError(`Invalid encoding: ${encoding}`);
@@ -437,7 +437,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
   }
 
   private validatePaths(entryFiles: string[], outputFile: string): void {
-    entryFiles.forEach((file) => {
+    entryFiles.forEach(file => {
       this.deps.validator.validatePath(file, "Entry file");
     });
 
@@ -449,7 +449,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
 
   public printUsage(): void {
     const usage = [
-      "Usage: deppack <files...> --output <output> [options]",
+      "Usage: gather-ts <files...> --output <output> [options]",
       "",
       "Arguments:",
       "  files                Entry files to analyze (comma or space separated)",
@@ -469,12 +469,12 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
       "",
       "Examples:",
       "  # Single file with metrics",
-      "  $ deppack src/app/page.tsx --output output.txt --metrics",
+      "  $ gather-ts src/app/page.tsx --output output.txt --metrics",
       "",
       "  # Multiple files with custom batch size",
-      "  $ deppack src/app/page.tsx,src/components/Button.tsx --output output.txt --batch-size 50",
+      "  $ gather-ts src/app/page.tsx,src/components/Button.tsx --output output.txt --batch-size 50",
       "",
-      "For more information, visit: https://github.com/yourusername/deppack",
+      "For more information, visit: https://github.com/usexr/gather-ts",
     ].join("\n");
 
     this.deps.logger.info(usage);

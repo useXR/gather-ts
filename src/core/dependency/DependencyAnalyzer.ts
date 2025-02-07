@@ -31,7 +31,7 @@ export class DependencyAnalyzer
 
   constructor(
     private readonly deps: IDependencyAnalyzerDeps,
-    options: IDependencyAnalyzerOptions = {}
+    options: IDependencyAnalyzerOptions = {},
   ) {
     super();
     this.debug = options.debug || false;
@@ -69,13 +69,13 @@ export class DependencyAnalyzer
         !this.deps.fileSystem.exists(this.webpackConfigPath)
       ) {
         this.deps.logger.warn(
-          `Webpack config not found at: ${this.webpackConfigPath}`
+          `Webpack config not found at: ${this.webpackConfigPath}`,
         );
       }
 
       if (!this.deps.fileSystem.exists(this.tsConfigPath)) {
         this.deps.logger.warn(
-          `TypeScript config not found at: ${this.tsConfigPath}`
+          `TypeScript config not found at: ${this.tsConfigPath}`,
         );
       }
 
@@ -99,13 +99,13 @@ export class DependencyAnalyzer
   private handleError(
     operation: string,
     error: unknown,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): never {
     const message = error instanceof Error ? error.message : String(error);
     const analysisError = new DependencyAnalysisError(
       `Dependency analysis ${operation} failed: ${message}`,
       context?.entryPoint as string,
-      context?.dependencies as string[]
+      context?.dependencies as string[],
     );
     this.deps.logger.error(analysisError.message);
     this.emit("analysis:error", {
@@ -133,7 +133,7 @@ export class DependencyAnalyzer
     phase: IDependencyProgress["phase"],
     completed: number,
     total: number,
-    currentFile?: string
+    currentFile?: string,
   ): void {
     this.emit("progress", {
       phase,
@@ -146,7 +146,7 @@ export class DependencyAnalyzer
   public async validateEntryFiles(
     entryFiles: string[],
     rootDir: string,
-    options: IAnalyzeOptions = {}
+    options: IAnalyzeOptions = {},
   ): Promise<string[]> {
     if (!this.isInitialized) {
       throw new ValidationError("DependencyAnalyzer not initialized");
@@ -168,7 +168,7 @@ export class DependencyAnalyzer
       try {
         const resolvedPath = this.deps.fileSystem.resolvePath(
           rootDir,
-          file.trim()
+          file.trim(),
         );
 
         if (!this.deps.fileSystem.exists(resolvedPath)) {
@@ -214,7 +214,7 @@ export class DependencyAnalyzer
         new ValidationError("Entry file validation failed", {
           errors: validationResult.errors,
           invalidFiles: validationResult.invalidFiles,
-        })
+        }),
       );
     }
 
@@ -224,7 +224,7 @@ export class DependencyAnalyzer
   public async analyzeDependencies(
     entryFiles: string | string[],
     projectRoot: string,
-    options: IAnalyzeOptions = {}
+    options: IAnalyzeOptions = {},
   ): Promise<IDependencyAnalysisResult> {
     if (!this.isInitialized) {
       throw new ValidationError("DependencyAnalyzer not initialized");
@@ -232,9 +232,9 @@ export class DependencyAnalyzer
 
     const startTime = Date.now();
     const files = Array.isArray(entryFiles) ? entryFiles : [entryFiles];
-    
+
     this.logDebug(`Project root: ${projectRoot}`);
-    this.logDebug(`Entry files: ${files.join(', ')}`);
+    this.logDebug(`Entry files: ${files.join(", ")}`);
 
     if (options.useWorkingDir) {
       this.changeWorkingDirectory(projectRoot);
@@ -247,15 +247,15 @@ export class DependencyAnalyzer
       });
 
       // Convert entry files to absolute paths if they aren't already
-      const absoluteFiles = files.map((file) =>
+      const absoluteFiles = files.map(file =>
         this.deps.fileSystem.isAbsolute(file)
           ? file
-          : this.deps.fileSystem.resolvePath(projectRoot, file)
+          : this.deps.fileSystem.resolvePath(projectRoot, file),
       );
 
       // Get relative paths for madge
-      const relativeFiles = absoluteFiles.map((file) =>
-        this.deps.fileSystem.getRelativePath(projectRoot, file)
+      const relativeFiles = absoluteFiles.map(file =>
+        this.deps.fileSystem.getRelativePath(projectRoot, file),
       );
 
       this.logDebug(`Analyzing dependencies for: ${relativeFiles.join(", ")}`);
@@ -265,8 +265,8 @@ export class DependencyAnalyzer
       this.logDebug(
         `Using TSConfig: ${this.deps.fileSystem.joinPath(
           projectRoot,
-          this.tsConfigPath
-        )}`
+          this.tsConfigPath,
+        )}`,
       );
       this.logDebug(`File extensions: ${this.fileExtensions.join(", ")}`);
 
@@ -279,9 +279,8 @@ export class DependencyAnalyzer
           const result = {
             entryFiles: absoluteFiles,
             dependencies: cachedDeps,
-            circularDependencies: await this.getCircularDependencies(
-              cachedDeps
-            ),
+            circularDependencies:
+              await this.getCircularDependencies(cachedDeps),
             totalFiles: Object.keys(cachedDeps).length,
             analysisTime: Date.now() - startTime,
           };
@@ -294,14 +293,14 @@ export class DependencyAnalyzer
       const ignorePatterns = this.deps.ignoreHandler
         .getPatterns()
         .map(
-          (pattern) =>
+          pattern =>
             new RegExp(
               pattern
                 .replace(/\./g, "\\.")
                 .replace(/\*\*/g, ".*")
                 .replace(/\*/g, "[^/]*")
-                .replace(/\?/g, ".")
-            )
+                .replace(/\?/g, "."),
+            ),
         );
 
       const madgeConfig = {
@@ -326,13 +325,13 @@ export class DependencyAnalyzer
       // Process each entry file
       let processedFiles = 0;
       const dependencyMaps = await Promise.all(
-        relativeFiles.map(async (entryFile) => {
+        relativeFiles.map(async entryFile => {
           this.logDebug(`Processing dependencies for: ${entryFile}`);
           this.emitProgress(
             "analysis",
             ++processedFiles,
             relativeFiles.length,
-            entryFile
+            entryFile,
           );
 
           try {
@@ -340,17 +339,17 @@ export class DependencyAnalyzer
             return await madgeResult.obj();
           } catch (error) {
             this.deps.logger.error(
-              `Failed to analyze dependencies for ${entryFile}: ${error}`
+              `Failed to analyze dependencies for ${entryFile}: ${error}`,
             );
             throw error;
           }
-        })
+        }),
       );
 
       const dependencies: IDependencyMap = {};
       let totalFiles = 0;
 
-      dependencyMaps.forEach((deps) => {
+      dependencyMaps.forEach(deps => {
         Object.entries(deps).forEach(([file, fileDeps]) => {
           const absFile = this.deps.fileSystem.resolvePath(projectRoot, file);
 
@@ -359,16 +358,16 @@ export class DependencyAnalyzer
             !this.deps.ignoreHandler.shouldIgnore(absFile)
           ) {
             const validDeps = fileDeps
-              .map((dep) => this.deps.fileSystem.resolvePath(projectRoot, dep))
+              .map(dep => this.deps.fileSystem.resolvePath(projectRoot, dep))
               .filter(
-                (dep) =>
+                dep =>
                   options.includeNodeModules ||
-                  !this.deps.ignoreHandler.shouldIgnore(dep)
+                  !this.deps.ignoreHandler.shouldIgnore(dep),
               );
 
             if (validDeps.length > 0) {
               dependencies[absFile] = Array.from(
-                new Set([...(dependencies[absFile] || []), ...validDeps])
+                new Set([...(dependencies[absFile] || []), ...validDeps]),
               );
               totalFiles++;
             }
@@ -382,9 +381,8 @@ export class DependencyAnalyzer
         this.deps.cache.set(cacheKey, dependencies);
       }
 
-      const circularDependencies = await this.getCircularDependencies(
-        dependencies
-      );
+      const circularDependencies =
+        await this.getCircularDependencies(dependencies);
 
       const result: IDependencyAnalysisResult = {
         entryFiles: absoluteFiles,
@@ -406,7 +404,7 @@ export class DependencyAnalyzer
       this.logDebug(
         `Analysis complete: ${totalFiles} files, ` +
           `${circularDependencies.length} circular dependencies, ` +
-          `${result.analysisTime}ms`
+          `${result.analysisTime}ms`,
       );
 
       return result;
@@ -428,14 +426,14 @@ export class DependencyAnalyzer
   public async gatherDependencies(
     adjacencyList: IDependencyMap,
     entryFiles: string[],
-    maxDepth?: number
+    maxDepth?: number,
   ): Promise<string[]> {
     if (!this.isInitialized) {
       throw new ValidationError("DependencyAnalyzer not initialized");
     }
 
     this.logDebug(
-      `Gathering dependencies with max depth: ${maxDepth || "unlimited"}`
+      `Gathering dependencies with max depth: ${maxDepth || "unlimited"}`,
     );
 
     const queue: Array<{ file: string; depth: number }> = [];
@@ -480,7 +478,7 @@ export class DependencyAnalyzer
 
     // Filter out empty files
     const nonEmptyFiles = await Promise.all(
-      result.map(async (filePath) => {
+      result.map(async filePath => {
         try {
           const content = await this.deps.fileSystem.readFile(filePath);
           return content.trim() !== "" ? filePath : null;
@@ -488,14 +486,14 @@ export class DependencyAnalyzer
           this.deps.logger.warn(`Error reading file ${filePath}: ${error}`);
           return null;
         }
-      })
+      }),
     );
 
     return nonEmptyFiles.filter((file): file is string => file !== null);
   }
 
   public async getCircularDependencies(
-    dependencyMap: IDependencyMap
+    dependencyMap: IDependencyMap,
   ): Promise<string[][]> {
     this.logDebug("Analyzing circular dependencies");
 
@@ -517,9 +515,9 @@ export class DependencyAnalyzer
           const cycle = path.slice(cycleStart);
           if (
             !cycles.some(
-              (existing) =>
+              existing =>
                 existing.length === cycle.length &&
-                existing.every((value, index) => value === cycle[index])
+                existing.every((value, index) => value === cycle[index]),
             )
           ) {
             cycles.push(cycle);

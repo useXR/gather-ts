@@ -1,0 +1,32 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "entryPoints": [
+      "./src/index.ts",
+      "./src/cli.ts",
+      "./src/config/**/*.ts",
+      "./src/core/**/*.ts",
+      "./src/errors/**/*.ts",
+      "./src/utils/**/*.ts"
+    ],
+    "entryPointStrategy": "expand",
+    "out": "docs",
+    "name": "Gather-ts Documentation",
+    "excludePrivate": true,
+    "excludeProtected": true,
+    "excludeExternals": true,
+    "includeVersion": true,
+    "categorizeByGroup": true,
+    "categoryOrder": ["Core", "Utilities", "Interfaces", "*"],
+    "searchInComments": true,
+    "plugin": ["typedoc-plugin-markdown"],
+    "readme": "README.md",
+    "exclude": [
+      "**/node_modules/**",
+      "**/*.spec.ts",
+      "**/*.test.ts",
+      "**/dist/**"
+    ],
+    "theme": "default",
+    "cleanOutputDir": true,
+    "githubPages": false
+  }

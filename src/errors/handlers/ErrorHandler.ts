@@ -1,9 +1,14 @@
 // src/errors/handlers/ErrorHandler.ts
 
-import { BaseService } from '@/types/services';
-import { DeppackError } from '../exceptions';
-import { IErrorHandler, IErrorProcessingStrategy, IErrorHandlerDeps, IErrorHandlerOptions, IErrorOperationOptions } from '../interfaces/IErrorHandler';
-
+import { BaseService } from "@/types/services";
+import { GatherTSError } from "../exceptions";
+import {
+  IErrorHandler,
+  IErrorProcessingStrategy,
+  IErrorHandlerDeps,
+  IErrorHandlerOptions,
+  IErrorOperationOptions,
+} from "../interfaces/IErrorHandler";
 
 export class ErrorHandler extends BaseService implements IErrorHandler {
   private readonly processingStrategies: IErrorProcessingStrategy[] = [];
@@ -15,7 +20,7 @@ export class ErrorHandler extends BaseService implements IErrorHandler {
 
   constructor(
     private readonly deps: IErrorHandlerDeps,
-    options: IErrorHandlerOptions = {}
+    options: IErrorHandlerOptions = {},
   ) {
     super();
     this.debug = options.debug || false;
@@ -31,13 +36,13 @@ export class ErrorHandler extends BaseService implements IErrorHandler {
 
   public override async initialize(): Promise<void> {
     await super.initialize();
-    this.logDebug('Initializing ErrorHandler');
+    this.logDebug("Initializing ErrorHandler");
 
     try {
       if (this.logToFile && this.logFilePath) {
         this.logDebug(`Setting up file logging at ${this.logFilePath}`);
         const logDir = this.deps.fileSystem.getDirName(this.logFilePath);
-        
+
         if (!this.deps.fileSystem.exists(logDir)) {
           await this.deps.fileSystem.createDirectory(logDir, true);
         }
@@ -45,17 +50,17 @@ export class ErrorHandler extends BaseService implements IErrorHandler {
         this.registerStrategy(this.createFileStrategy());
       }
 
-      this.logDebug('ErrorHandler initialization complete');
+      this.logDebug("ErrorHandler initialization complete");
     } catch (error) {
       this.deps.logger.error(
-        `Failed to initialize ErrorHandler: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to initialize ErrorHandler: ${error instanceof Error ? error.message : String(error)}`,
       );
       throw error;
     }
   }
 
   public override cleanup(): void {
-    this.logDebug('Cleaning up ErrorHandler');
+    this.logDebug("Cleaning up ErrorHandler");
     this.processingStrategies.length = 0;
     super.cleanup();
   }
@@ -67,7 +72,7 @@ export class ErrorHandler extends BaseService implements IErrorHandler {
   }
 
   public registerStrategy(strategy: IErrorProcessingStrategy): void {
-    this.logDebug('Registering new error processing strategy');
+    this.logDebug("Registering new error processing strategy");
     this.processingStrategies.push(strategy);
   }
 
@@ -81,18 +86,20 @@ export class ErrorHandler extends BaseService implements IErrorHandler {
     for (const strategy of this.processingStrategies) {
       if (strategy.shouldHandle(normalizedError)) {
         processedByStrategy = true;
-        this.logDebug('Processing error through strategy');
+        this.logDebug("Processing error through strategy");
         strategy.handle(normalizedError, context);
       }
     }
 
     if (!processedByStrategy) {
-      this.logDebug('No strategy handled the error, using default console logging');
+      this.logDebug(
+        "No strategy handled the error, using default console logging",
+      );
       this.deps.logger.error(normalizedError.message);
     }
 
     if (options.rethrow || this.rethrow) {
-      this.logDebug('Rethrowing error as configured');
+      this.logDebug("Rethrowing error as configured");
       throw normalizedError;
     }
   }
@@ -112,7 +119,7 @@ export class ErrorHandler extends BaseService implements IErrorHandler {
     try {
       await fn();
     } catch (error) {
-      this.logDebug('Error caught in error boundary');
+      this.logDebug("Error caught in error boundary");
       this.handle(error instanceof Error ? error : new Error(String(error)));
       return Promise.reject(error);
     }
@@ -125,61 +132,63 @@ export class ErrorHandler extends BaseService implements IErrorHandler {
         const classification = this.deps.errorUtils.classifyError(error);
 
         switch (classification.severity) {
-          case 'error':
+          case "error":
             this.deps.logger.error(classification.message);
             if (classification.details) {
               if (this.debug) {
-        this.deps.logger.debug(`Error details: ${JSON.stringify(classification.details)}`);
-      }
+                this.deps.logger.debug(
+                  `Error details: ${JSON.stringify(classification.details)}`,
+                );
+              }
             }
             break;
-          case 'warning':
+          case "warning":
             this.deps.logger.warn(classification.message);
             break;
-          case 'info':
+          case "info":
             this.deps.logger.info(classification.message);
             break;
         }
 
         if (this.debug && classification.stackTrace) {
-          this.logDebug('Stack trace:' + classification.stackTrace);
+          this.logDebug("Stack trace:" + classification.stackTrace);
         }
-      }
+      },
     };
   }
 
   private createFileStrategy(): IErrorProcessingStrategy {
     if (!this.logFilePath) {
-      throw new Error('Log file path not configured');
+      throw new Error("Log file path not configured");
     }
 
     return {
-      shouldHandle: (error: Error) => error instanceof DeppackError,
+      shouldHandle: (error: Error) => error instanceof GatherTSError,
       handle: (error: Error, context: Record<string, unknown>) => {
         const timestamp = new Date().toISOString();
         const classification = this.deps.errorUtils.classifyError(error);
-        
+
         const logEntry = {
           timestamp,
           level: classification.severity,
           type: classification.type,
           message: classification.message,
           details: classification.details,
-          context
+          context,
         };
 
         try {
           this.deps.fileSystem.writeFileSync(
             this.logFilePath!,
-            JSON.stringify(logEntry) + '\n',
-            { flag: 'a' }
+            JSON.stringify(logEntry) + "\n",
+            { flag: "a" },
           );
         } catch (writeError) {
           this.deps.logger.error(
-            `Failed to write to error log: ${writeError instanceof Error ? writeError.message : String(writeError)}`
+            `Failed to write to error log: ${writeError instanceof Error ? writeError.message : String(writeError)}`,
           );
         }
-      }
+      },
     };
   }
 }

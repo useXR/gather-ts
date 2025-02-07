@@ -1,13 +1,11 @@
 // types/errors.ts
-export interface IErrorDetails {
-  [key: string]: unknown;
+
+export interface IBaseError extends Error {
+  readonly details?: IErrorDetails;
 }
 
-export interface IBaseError {
-  name: string;
-  message: string;
-  details?: IErrorDetails;
-  cause?: Error;
+export interface IErrorDetails {
+  [key: string]: unknown;
 }
 
 export interface IValidationErrorDetails extends IErrorDetails {

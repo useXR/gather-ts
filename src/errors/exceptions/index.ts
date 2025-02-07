@@ -1,11 +1,21 @@
-import { IBaseError, IErrorDetails, IValidationErrorDetails, IFileSystemErrorDetails, IConfigurationErrorDetails, ITokenizationErrorDetails, IDependencyAnalysisErrorDetails } from "errors";
-import { ICacheErrorDetails, ICompilationErrorDetails } from "../interfaces/error-types";
-
+import {
+  IBaseError,
+  IErrorDetails,
+  IValidationErrorDetails,
+  IFileSystemErrorDetails,
+  IConfigurationErrorDetails,
+  ITokenizationErrorDetails,
+  IDependencyAnalysisErrorDetails,
+} from "errors";
+import {
+  ICacheErrorDetails,
+  ICompilationErrorDetails,
+} from "../interfaces/error-types";
 
 /**
- * Base class for all Deppack errors
+ * Base class for all gather-ts errors
  */
-export abstract class DeppackError extends Error implements IBaseError {
+export abstract class GatherTSError extends Error implements IBaseError {
   public abstract readonly name: string;
   public readonly details?: IErrorDetails;
   public readonly timestamp: string;
@@ -14,7 +24,7 @@ export abstract class DeppackError extends Error implements IBaseError {
     super(message);
     this.details = details;
     this.timestamp = new Date().toISOString();
-    
+
     // Ensure proper prototype chain for instanceof checks
     Object.setPrototypeOf(this, new.target.prototype);
   }
@@ -25,7 +35,7 @@ export abstract class DeppackError extends Error implements IBaseError {
       message: this.message,
       details: this.details,
       timestamp: this.timestamp,
-      stack: this.stack
+      stack: this.stack,
     };
   }
 }
@@ -33,8 +43,8 @@ export abstract class DeppackError extends Error implements IBaseError {
 /**
  * Input validation errors
  */
-export class ValidationError extends DeppackError {
-  public readonly name = 'ValidationError';
+export class ValidationError extends GatherTSError {
+  public readonly name = "ValidationError";
 
   constructor(message: string, details?: IValidationErrorDetails) {
     super(message, details);
@@ -44,13 +54,13 @@ export class ValidationError extends DeppackError {
 /**
  * File system operation errors
  */
-export class FileSystemError extends DeppackError {
-  public readonly name = 'FileSystemError';
+export class FileSystemError extends GatherTSError {
+  public readonly name = "FileSystemError";
 
   constructor(
-    message: string, 
-    filePath: string, 
-    operation: IFileSystemErrorDetails['operation']
+    message: string,
+    filePath: string,
+    operation: IFileSystemErrorDetails["operation"],
   ) {
     super(message, { filePath, operation });
   }
@@ -59,7 +69,7 @@ export class FileSystemError extends DeppackError {
     return (this.details as IFileSystemErrorDetails).filePath;
   }
 
-  get operation(): IFileSystemErrorDetails['operation'] {
+  get operation(): IFileSystemErrorDetails["operation"] {
     return (this.details as IFileSystemErrorDetails).operation;
   }
 }
@@ -67,13 +77,13 @@ export class FileSystemError extends DeppackError {
 /**
  * Configuration related errors
  */
-export class ConfigurationError extends DeppackError {
-  public readonly name = 'ConfigurationError';
-  
+export class ConfigurationError extends GatherTSError {
+  public readonly name = "ConfigurationError";
+
   constructor(message: string, configPath: string) {
     // Ensure configPath is non-null and non-undefined
     if (!configPath) {
-      configPath = 'unknown';
+      configPath = "unknown";
     }
     super(message, { configPath });
   }
@@ -82,14 +92,14 @@ export class ConfigurationError extends DeppackError {
 /**
  * Token processing errors
  */
-export class TokenizationError extends DeppackError {
-  public readonly name = 'TokenizationError';
+export class TokenizationError extends GatherTSError {
+  public readonly name = "TokenizationError";
 
   constructor(
-    message: string, 
-    filePath: string, 
-    operation: ITokenizationErrorDetails['operation'],
-    model?: string
+    message: string,
+    filePath: string,
+    operation: ITokenizationErrorDetails["operation"],
+    model?: string,
   ) {
     super(message, { filePath, operation, model });
   }
@@ -98,7 +108,7 @@ export class TokenizationError extends DeppackError {
     return (this.details as ITokenizationErrorDetails).filePath;
   }
 
-  get operation(): ITokenizationErrorDetails['operation'] {
+  get operation(): ITokenizationErrorDetails["operation"] {
     return (this.details as ITokenizationErrorDetails).operation;
   }
 }
@@ -106,13 +116,13 @@ export class TokenizationError extends DeppackError {
 /**
  * Dependency analysis errors
  */
-export class DependencyAnalysisError extends DeppackError {
-  public readonly name = 'DependencyAnalysisError';
+export class DependencyAnalysisError extends GatherTSError {
+  public readonly name = "DependencyAnalysisError";
 
   constructor(
     message: string,
     entryPoint?: string,
-    failedDependencies?: string[]
+    failedDependencies?: string[],
   ) {
     super(message, { entryPoint, failedDependencies });
   }
@@ -129,18 +139,18 @@ export class DependencyAnalysisError extends DeppackError {
 /**
  * Cache operation errors
  */
-export class CacheError extends DeppackError {
-  public readonly name = 'CacheError';
+export class CacheError extends GatherTSError {
+  public readonly name = "CacheError";
 
   constructor(
     message: string,
-    operation: ICacheErrorDetails['operation'],
-    key?: string
+    operation: ICacheErrorDetails["operation"],
+    key?: string,
   ) {
     super(message, { operation, key });
   }
 
-  get operation(): ICacheErrorDetails['operation'] {
+  get operation(): ICacheErrorDetails["operation"] {
     return (this.details as ICacheErrorDetails).operation;
   }
 }
@@ -148,18 +158,18 @@ export class CacheError extends DeppackError {
 /**
  * Compilation process errors
  */
-export class CompilationError extends DeppackError {
-  public readonly name = 'CompilationError';
+export class CompilationError extends GatherTSError {
+  public readonly name = "CompilationError";
 
   constructor(
     message: string,
-    phase: ICompilationErrorDetails['phase'],
-    details?: Omit<ICompilationErrorDetails, 'phase'>
+    phase: ICompilationErrorDetails["phase"],
+    details?: Omit<ICompilationErrorDetails, "phase">,
   ) {
     super(message, { phase, ...details });
   }
 
-  get phase(): ICompilationErrorDetails['phase'] {
+  get phase(): ICompilationErrorDetails["phase"] {
     return (this.details as ICompilationErrorDetails).phase;
   }
 }
@@ -167,14 +177,10 @@ export class CompilationError extends DeppackError {
 /**
  * Timeout errors
  */
-export class TimeoutError extends DeppackError {
-  public readonly name = 'TimeoutError';
+export class TimeoutError extends GatherTSError {
+  public readonly name = "TimeoutError";
 
-  constructor(
-    message: string,
-    operation: string,
-    timeout: number
-  ) {
+  constructor(message: string, operation: string, timeout: number) {
     super(message, { operation, timeout });
   }
 }
@@ -182,14 +188,14 @@ export class TimeoutError extends DeppackError {
 /**
  * Resource usage limit errors
  */
-export class ResourceLimitError extends DeppackError {
-  public readonly name = 'ResourceLimitError';
+export class ResourceLimitError extends GatherTSError {
+  public readonly name = "ResourceLimitError";
 
   constructor(
     message: string,
     resource: string,
     limit: number,
-    actual: number
+    actual: number,
   ) {
     super(message, { resource, limit, actual });
   }

@@ -8,11 +8,14 @@ import {
   IIgnoreHandlerOptions,
   IIgnorePatternValidator,
   IPatternValidationResult,
-  ILoadPatternsOptions
+  ILoadPatternsOptions,
 } from "./interfaces/IIgnoreHandler";
-import { BaseService } from "@/types/services"
+import { BaseService } from "@/types/services";
 
-export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnorePatternValidator {
+export class IgnoreHandler
+  extends BaseService
+  implements IIgnoreHandler, IIgnorePatternValidator
+{
   private patterns: string[] = [];
   private readonly projectRoot: string;
   private readonly debug: boolean;
@@ -20,7 +23,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
   constructor(
     projectRoot: string,
     private readonly deps: IIgnoreHandlerDeps,
-    options: IIgnoreHandlerOptions = {}
+    options: IIgnoreHandlerOptions = {},
   ) {
     super();
     if (!projectRoot || typeof projectRoot !== "string") {
@@ -29,7 +32,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
 
     this.projectRoot = projectRoot;
     this.debug = options.debug || false;
-    
+
     // Defer pattern loading to initialize()
     if (options.extraPatterns) {
       this.logDebug(`Received ${options.extraPatterns.length} extra patterns`);
@@ -39,24 +42,26 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
 
   public override async initialize(): Promise<void> {
     await super.initialize();
-    this.logDebug('Initializing IgnoreHandler');
+    this.logDebug("Initializing IgnoreHandler");
 
     try {
       if (!this.deps.fileSystem.exists(this.projectRoot)) {
-        throw new ValidationError("Project root does not exist", { projectRoot: this.projectRoot });
+        throw new ValidationError("Project root does not exist", {
+          projectRoot: this.projectRoot,
+        });
       }
 
       await this.loadIgnorePatterns();
-      this.logDebug('IgnoreHandler initialization complete');
+      this.logDebug("IgnoreHandler initialization complete");
     } catch (error) {
       throw new ValidationError(
-        `Failed to initialize IgnoreHandler: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to initialize IgnoreHandler: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
 
   public override cleanup(): void {
-    this.logDebug('Cleaning up IgnoreHandler');
+    this.logDebug("Cleaning up IgnoreHandler");
     this.patterns = [];
     super.cleanup();
   }
@@ -67,40 +72,60 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
     }
   }
 
-  private async loadIgnorePatterns(options: ILoadPatternsOptions = {}): Promise<void> {
-    const deppackIgnorePath = this.deps.fileSystem.joinPath(this.projectRoot, ".deppackignore");
-    const gitignorePath = this.deps.fileSystem.joinPath(this.projectRoot, ".gitignore");
+  private async loadIgnorePatterns(
+    options: ILoadPatternsOptions = {},
+  ): Promise<void> {
+    const gatherTSIgnorePath = this.deps.fileSystem.joinPath(
+      this.projectRoot,
+      ".gather-ts-ignore",
+    );
+    const gitignorePath = this.deps.fileSystem.joinPath(
+      this.projectRoot,
+      ".gitignore",
+    );
 
     try {
-      this.logDebug('Loading ignore patterns');
+      this.logDebug("Loading ignore patterns");
 
       // Load patterns from both files
-      const deppackPatterns = await this.loadIgnoreFile(deppackIgnorePath);
-      const gitignorePatterns = options.skipGitignore ? [] : await this.loadIgnoreFile(gitignorePath);
+      const gatherTSPatterns = await this.loadIgnoreFile(gatherTSIgnorePath);
+      const gitignorePatterns = options.skipGitignore
+        ? []
+        : await this.loadIgnoreFile(gitignorePath);
 
       // Process patterns from each source
-      const processedDeppackPatterns = this.processPatterns(deppackPatterns, ".deppackignore");
-      const processedGitignorePatterns = this.processPatterns(gitignorePatterns, ".gitignore");
+      const processedGatherTSPatterns = this.processPatterns(
+        gatherTSPatterns,
+        ".gather-ts-ignore",
+      );
+      const processedGitignorePatterns = this.processPatterns(
+        gitignorePatterns,
+        ".gitignore",
+      );
 
       // Combine all patterns
       const defaultPatterns = ["node_modules/**", ".git/**"];
       this.patterns = [
         ...defaultPatterns,
-        ...processedDeppackPatterns,
+        ...processedGatherTSPatterns,
         ...processedGitignorePatterns,
-        ...this.patterns // Keep any extra patterns added in constructor
+        ...this.patterns, // Keep any extra patterns added in constructor
       ];
 
       // Remove duplicates while preserving order
       this.patterns = [...new Set(this.patterns)];
 
-      if (deppackPatterns.length > 0 || gitignorePatterns.length > 0) {
+      if (gatherTSPatterns.length > 0 || gitignorePatterns.length > 0) {
         this.deps.logger.info("\nLoaded ignore patterns from:");
-        if (deppackPatterns.length > 0) {
-          this.deps.logger.info(`- .deppackignore (${deppackPatterns.length} patterns)`);
+        if (gatherTSPatterns.length > 0) {
+          this.deps.logger.info(
+            `- .gather-ts-ignore (${gatherTSPatterns.length} patterns)`,
+          );
         }
         if (gitignorePatterns.length > 0) {
-          this.deps.logger.info(`- .gitignore (${gitignorePatterns.length} patterns)`);
+          this.deps.logger.info(
+            `- .gitignore (${gitignorePatterns.length} patterns)`,
+          );
         }
       }
 
@@ -110,7 +135,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
         throw error;
       }
       throw new ValidationError(
-        `Failed to load ignore patterns: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to load ignore patterns: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -122,11 +147,13 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
         return [];
       }
 
-      const content = await this.deps.fileSystem.readFile(filePath, { encoding: 'utf8' });
+      const content = await this.deps.fileSystem.readFile(filePath, {
+        encoding: "utf8",
+      });
       const patterns = content
         .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line && !line.startsWith("#"));
+        .map(line => line.trim())
+        .filter(line => line && !line.startsWith("#"));
 
       this.logDebug(`Loaded ${patterns.length} patterns from ${filePath}`);
       return patterns;
@@ -134,7 +161,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
       throw new FileSystemError(
         `Failed to read ignore file: ${error instanceof Error ? error.message : String(error)}`,
         filePath,
-        "read"
+        "read",
       );
     }
   }
@@ -154,7 +181,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
     } catch (error) {
       throw new ValidationError(
         `Invalid ignore pattern syntax: ${error instanceof Error ? error.message : String(error)}`,
-        { pattern }
+        { pattern },
       );
     }
   }
@@ -180,7 +207,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
     const validPatterns: string[] = [];
     const errors: string[] = [];
 
-    patterns.forEach((pattern) => {
+    patterns.forEach(pattern => {
       const result = this.parsePattern(pattern);
       if (result.isValid && result.normalizedPattern) {
         validPatterns.push(result.normalizedPattern);
@@ -231,14 +258,14 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
     } catch (error) {
       throw new ValidationError(
         `Failed to process patterns from ${source}: ${error instanceof Error ? error.message : String(error)}`,
-        { source, patterns }
+        { source, patterns },
       );
     }
   }
 
   public shouldIgnore(filePath: string): boolean {
     if (!this.isInitialized) {
-      throw new ValidationError('IgnoreHandler not initialized');
+      throw new ValidationError("IgnoreHandler not initialized");
     }
 
     this.validateFilePath(filePath);
@@ -277,16 +304,17 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
           }
         } catch (error) {
           this.deps.logger.warn(
-            `Pattern matching error for '${pattern}': ${error instanceof Error ? error.message : String(error)}`
+            `Pattern matching error for '${pattern}': ${error instanceof Error ? error.message : String(error)}`,
           );
           continue;
         }
       }
 
       if (lastMatchedPattern) {
-        this.logDebug(wasNegated ? 
-          `File included by negation pattern: '${lastMatchedPattern}'` :
-          `File matched pattern: '${lastMatchedPattern}'`
+        this.logDebug(
+          wasNegated
+            ? `File included by negation pattern: '${lastMatchedPattern}'`
+            : `File matched pattern: '${lastMatchedPattern}'`,
         );
       }
 
@@ -294,7 +322,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
     } catch (error) {
       throw new ValidationError(
         `Error checking ignore status: ${error instanceof Error ? error.message : String(error)}`,
-        { filePath }
+        { filePath },
       );
     }
   }
@@ -307,7 +335,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
     try {
       const absolutePath = this.deps.fileSystem.resolvePath(
         this.deps.fileSystem.isAbsolute(filePath) ? "" : this.projectRoot,
-        filePath
+        filePath,
       );
 
       if (!this.deps.fileSystem.exists(absolutePath)) {
@@ -327,7 +355,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
       }
       throw new ValidationError(
         `Failed to validate file path: ${error instanceof Error ? error.message : String(error)}`,
-        { filePath }
+        { filePath },
       );
     }
   }
@@ -348,7 +376,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
     } catch (error) {
       throw new ValidationError(
         `Failed to add ignore pattern: ${error instanceof Error ? error.message : String(error)}`,
-        { pattern }
+        { pattern },
       );
     }
   }
@@ -366,7 +394,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
   }
 
   public resetPatterns(): void {
-    this.logDebug('Resetting patterns to defaults');
+    this.logDebug("Resetting patterns to defaults");
     this.patterns = ["node_modules/**", ".git/**"];
   }
 
@@ -385,7 +413,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
       this.deps.logger.debug(`Project Root: ${this.projectRoot}`);
       this.deps.logger.debug("\nTesting patterns:");
 
-      const matchResults = this.patterns.map((pattern) => {
+      const matchResults = this.patterns.map(pattern => {
         try {
           const isMatch = micromatch.isMatch(relativePath, pattern, {
             dot: true,
@@ -414,7 +442,7 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
       });
 
       const negationPatterns = matchResults.filter(
-        ({ pattern, isMatch }) => pattern.startsWith("!") && isMatch
+        ({ pattern, isMatch }) => pattern.startsWith("!") && isMatch,
       );
 
       if (negationPatterns.length > 0) {
@@ -426,11 +454,13 @@ export class IgnoreHandler extends BaseService implements IIgnoreHandler, IIgnor
 
       const isIgnored = this.shouldIgnore(filePath);
       this.deps.logger.debug("\nFinal result:");
-      this.deps.logger.debug(`File will be ${isIgnored ? "IGNORED" : "INCLUDED"}`);
+      this.deps.logger.debug(
+        `File will be ${isIgnored ? "IGNORED" : "INCLUDED"}`,
+      );
     } catch (error) {
       throw new ValidationError(
         `Failed to print debug info: ${error instanceof Error ? error.message : String(error)}`,
-        { filePath }
+        { filePath },
       );
     }
   }

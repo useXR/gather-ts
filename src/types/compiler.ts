@@ -1,5 +1,5 @@
-import { IMetadata } from './common';
-import { IDependencyMap } from './dependency';
+import { IMetadata } from "./common";
+import { IDependencyMap } from "./dependency";
 
 export interface ICompileOptions {
   /**
@@ -141,20 +141,6 @@ export interface ICompilationStats {
    */
   totalTokens: number;
 }
-
-export interface ICompileContext {
-  options: ICompileOptions;
-  stats: ICompilationStats;
-  dependencies: IDependencyMap;
-}
-
-export type CompilePhase = 
-  | 'initialization'
-  | 'dependency-analysis'
-  | 'file-processing'
-  | 'tokenization'
-  | 'output-generation'
-  | 'completion';
 
 export interface ICompileMetrics {
   /**

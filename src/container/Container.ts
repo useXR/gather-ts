@@ -1,15 +1,15 @@
 // src/container/Container.ts
 
-import { EventEmitter } from 'events';
-import { ValidationError } from '@/errors';
-import { 
-  IContainer, 
+import { EventEmitter } from "events";
+import { ValidationError } from "@/errors";
+import {
+  IContainer,
   IServiceIdentifier,
   IServiceFactory,
   IServiceRegistration,
-  IContainerEvents
-} from './interfaces/IContainer';
-import { IService } from '@/types/services';
+  IContainerEvents,
+} from "./interfaces/IContainer";
+import { IService } from "@/types/services";
 
 export class Container extends EventEmitter implements IContainer {
   private static instance: Container;
@@ -36,61 +36,65 @@ export class Container extends EventEmitter implements IContainer {
   }
 
   public async initialize(): Promise<void> {
-    this.logDebug('Initializing Container');
-    
+    this.logDebug("Initializing Container");
+
     try {
       if (this.isInitialized) {
-        this.logDebug('Container already initialized');
+        this.logDebug("Container already initialized");
         return;
       }
 
-      this.emit('initialization:start', { timestamp: Date.now() });
+      this.emit("initialization:start", { timestamp: Date.now() });
 
       for (const [token, registration] of this.services.entries()) {
         const instance = registration.instance;
-        if (instance && 'initialize' in instance) {
+        if (instance && "initialize" in instance) {
           try {
             await instance.initialize();
             this.logDebug(`Initialized service: ${token}`);
           } catch (error) {
-            throw new Error(`Failed to initialize service ${token}: ${error instanceof Error ? error.message : String(error)}`);
+            throw new Error(
+              `Failed to initialize service ${token}: ${error instanceof Error ? error.message : String(error)}`,
+            );
           }
         }
       }
 
       this.isInitialized = true;
-      this.emit('initialization:complete', { timestamp: Date.now() });
-      this.logDebug('Container initialization complete');
+      this.emit("initialization:complete", { timestamp: Date.now() });
+      this.logDebug("Container initialization complete");
     } catch (error) {
-      this.handleError('initialization', error);
+      this.handleError("initialization", error);
     }
   }
 
   public cleanup(): void {
-    this.logDebug('Cleaning up Container');
-    
+    this.logDebug("Cleaning up Container");
+
     try {
-      this.emit('cleanup:start', { timestamp: Date.now() });
+      this.emit("cleanup:start", { timestamp: Date.now() });
 
       for (const [token, registration] of this.services.entries()) {
         const instance = registration.instance;
-        if (instance && 'cleanup' in instance) {
+        if (instance && "cleanup" in instance) {
           try {
             instance.cleanup();
             this.logDebug(`Cleaned up service: ${token}`);
           } catch (error) {
-            this.logDebug(`Error cleaning up service ${token}: ${error instanceof Error ? error.message : String(error)}`);
+            this.logDebug(
+              `Error cleaning up service ${token}: ${error instanceof Error ? error.message : String(error)}`,
+            );
           }
         }
       }
 
       this.services.clear();
       this.isInitialized = false;
-      
-      this.emit('cleanup:complete', { timestamp: Date.now() });
-      this.logDebug('Container cleanup complete');
+
+      this.emit("cleanup:complete", { timestamp: Date.now() });
+      this.logDebug("Container cleanup complete");
     } catch (error) {
-      this.handleError('cleanup', error);
+      this.handleError("cleanup", error);
     }
   }
 
@@ -99,11 +103,14 @@ export class Container extends EventEmitter implements IContainer {
     throw new ValidationError(`Container ${operation} failed: ${message}`);
   }
 
-  public register<T extends IService>(token: IServiceIdentifier<T>, instance: T): void {
+  public register<T extends IService>(
+    token: IServiceIdentifier<T>,
+    instance: T,
+  ): void {
     this.logDebug(`Registering service: ${token}`);
-    
+
     if (!token) {
-      throw new ValidationError('Service token cannot be empty');
+      throw new ValidationError("Service token cannot be empty");
     }
 
     const tokenStr = token.toString();
@@ -114,24 +121,27 @@ export class Container extends EventEmitter implements IContainer {
     this.services.set(tokenStr, {
       token,
       factory: () => instance,
-      instance
+      instance,
     });
 
-    this.emit('service:registered', {
+    this.emit("service:registered", {
       token: tokenStr,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
-  public registerFactory<T extends IService>(token: IServiceIdentifier<T>, factory: IServiceFactory<T>): void {
+  public registerFactory<T extends IService>(
+    token: IServiceIdentifier<T>,
+    factory: IServiceFactory<T>,
+  ): void {
     this.logDebug(`Registering factory: ${token}`);
-    
+
     if (!token) {
-      throw new ValidationError('Service token cannot be empty');
+      throw new ValidationError("Service token cannot be empty");
     }
 
-    if (!factory || typeof factory !== 'function') {
-      throw new ValidationError('Factory must be a function');
+    if (!factory || typeof factory !== "function") {
+      throw new ValidationError("Factory must be a function");
     }
 
     const tokenStr = token.toString();
@@ -140,15 +150,15 @@ export class Container extends EventEmitter implements IContainer {
       factory,
     });
 
-    this.emit('service:registered', {
+    this.emit("service:registered", {
       token: tokenStr,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
   public resolve<T extends IService>(token: IServiceIdentifier<T>): T {
     if (!this.isInitialized && !this.services.has(token.toString())) {
-      throw new ValidationError('Container not initialized');
+      throw new ValidationError("Container not initialized");
     }
 
     this.logDebug(`Resolving service: ${token}`);
@@ -164,26 +174,28 @@ export class Container extends EventEmitter implements IContainer {
       if (!registration.instance) {
         const instance = registration.factory();
         if (instance instanceof Promise) {
-          throw new ValidationError('Async service factories are not supported');
+          throw new ValidationError(
+            "Async service factories are not supported",
+          );
         }
         registration.instance = instance;
       }
 
-      this.emit('service:resolved', {
+      this.emit("service:resolved", {
         token: tokenStr,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       return registration.instance as T;
     } catch (error) {
-      this.emit('service:error', {
+      this.emit("service:error", {
         token: tokenStr,
         error: error instanceof Error ? error : new Error(String(error)),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       throw new ValidationError(
-        `Failed to resolve service ${tokenStr}: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to resolve service ${tokenStr}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -193,7 +205,7 @@ export class Container extends EventEmitter implements IContainer {
   }
 
   public clear(): void {
-    this.logDebug('Clearing all services');
+    this.logDebug("Clearing all services");
     this.cleanup();
   }
 }
@@ -203,7 +215,7 @@ export const ServiceTokens = {
   IGNORE_HANDLER: "IgnoreHandler",
   TOKEN_COUNTER: "TokenCounter",
   ERROR_HANDLER: "ErrorHandler",
-  ERROR_UTILS: 'ErrorUtils',
+  ERROR_UTILS: "ErrorUtils",
   FILE_SYSTEM: "FileSystem",
   DEPENDENCY_ANALYZER: "DependencyAnalyzer",
   LOGGER: "Logger",

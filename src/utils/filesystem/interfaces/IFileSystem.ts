@@ -39,7 +39,7 @@ export interface IFileSystem extends IService {
   writeFileSync(
     filePath: string,
     data: string | Buffer,
-    options?: IFileOperationOptions
+    options?: IFileOperationOptions,
   ): void;
   exists(path: string): boolean;
   isReadable(filePath: string): boolean;
@@ -50,7 +50,7 @@ export interface IFileSystem extends IService {
   writeFile(
     filePath: string,
     data: string | Buffer,
-    options?: IFileOperationOptions
+    options?: IFileOperationOptions,
   ): Promise<void>;
   deleteFile(filePath: string): Promise<void>;
   createDirectory(dirPath: string, recursive?: boolean): Promise<void>;

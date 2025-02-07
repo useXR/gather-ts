@@ -10,9 +10,9 @@ import {
   IConfigLoadOptions,
   IConfigMetrics,
 } from "./interfaces/IConfigManager";
-import { IDeppackConfig, IConfigValidationResult } from "@/types/config";
+import { IGatherTSConfig as IGatherTSConfig, IConfigValidationResult } from "@/types/config";
 import { TiktokenModel } from "@/types/models/tokenizer";
-import { BaseService } from "@/types/services"
+import { BaseService } from "@/types/services";
 
 // Create a class that extends EventEmitter and implements needed methods
 class EventEmitterBase extends EventEmitter {
@@ -29,7 +29,7 @@ class EventEmitterBase extends EventEmitter {
   }
 }
 
-const defaultConfig: IDeppackConfig = {
+const defaultConfig: IGatherTSConfig = {
   maxDepth: 5,
   topFilesCount: 5,
   showTokenCount: true,
@@ -48,7 +48,7 @@ const defaultConfig: IDeppackConfig = {
 
 export class ConfigManager extends BaseService implements IConfigManager {
   private eventEmitter: EventEmitterBase;
-  private config: IDeppackConfig;
+  private config: IGatherTSConfig;
   private readonly configPath: string;
   private readonly projectRoot: string;
   private readonly debug: boolean;
@@ -64,7 +64,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
   constructor(
     projectRoot: string,
     private readonly deps: IConfigManagerDeps,
-    options: IConfigManagerOptions = {}
+    options: IConfigManagerOptions = {},
   ) {
     super();
     this.eventEmitter = new EventEmitterBase();
@@ -72,7 +72,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
     if (!projectRoot || !this.deps.fileSystem.exists(projectRoot)) {
       throw new ConfigurationError(
         "Project root directory does not exist",
-        projectRoot
+        projectRoot,
       );
     }
 
@@ -81,7 +81,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
     this.watch = options.watch || false;
     this.configPath =
       options.configPath ||
-      this.deps.fileSystem.joinPath(projectRoot, "deppack.config.json");
+      this.deps.fileSystem.joinPath(projectRoot, "gather-ts.config.json");
 
     this.config = { ...defaultConfig };
     this.initializeMetrics();
@@ -122,7 +122,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
         `Failed to initialize ConfigManager: ${
           error instanceof Error ? error.message : String(error)
         }`,
-        this.configPath
+        this.configPath,
       );
     }
   }
@@ -154,7 +154,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
     }
   }
 
-  public getConfig(): IDeppackConfig {
+  public getConfig(): IGatherTSConfig {
     this.checkInitialized();
     return { ...this.config };
   }
@@ -177,7 +177,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
         this.deps.logger.warn(
           `Error watching config file: ${
             error instanceof Error ? error.message : String(error)
-          }`
+          }`,
         );
       }
     }, 1000) as unknown as NodeJS.Timeout;
@@ -186,12 +186,12 @@ export class ConfigManager extends BaseService implements IConfigManager {
   private async loadConfig(options: IConfigLoadOptions = {}): Promise<void> {
     this.logDebug(`Loading configuration${options.isWatch ? " (watch)" : ""}`);
 
-    let fileConfig: Partial<IDeppackConfig> = {};
+    let fileConfig: Partial<IGatherTSConfig> = {};
 
     try {
       if (this.deps.fileSystem.exists(this.configPath)) {
         const configContent = await this.deps.fileSystem.readFile(
-          this.configPath
+          this.configPath,
         );
         fileConfig = JSON.parse(configContent);
         this.logDebug("Loaded configuration from file");
@@ -208,7 +208,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
       if (!validation.isValid) {
         throw new ConfigurationError(
           `Configuration validation failed: ${validation.errors.join(", ")}`,
-          this.configPath
+          this.configPath,
         );
       }
 
@@ -231,14 +231,14 @@ export class ConfigManager extends BaseService implements IConfigManager {
         `Failed to load configuration: ${
           error instanceof Error ? error.message : String(error)
         }`,
-        this.configPath
+        this.configPath,
       );
     }
   }
 
   public async updateConfig(
-    updates: Partial<IDeppackConfig>
-  ): Promise<IDeppackConfig> {
+    updates: Partial<IGatherTSConfig>,
+  ): Promise<IGatherTSConfig> {
     this.logDebug("Updating configuration");
 
     try {
@@ -250,7 +250,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
       const validation = this.validateConfig(newConfig);
       if (!validation.isValid) {
         throw new ValidationError(
-          `Invalid configuration updates: ${validation.errors.join(", ")}`
+          `Invalid configuration updates: ${validation.errors.join(", ")}`,
         );
       }
 
@@ -275,7 +275,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
         `Failed to update configuration: ${
           error instanceof Error ? error.message : String(error)
         }`,
-        this.configPath
+        this.configPath,
       );
     }
   }
@@ -292,7 +292,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
         `Failed to save configuration: ${
           error instanceof Error ? error.message : String(error)
         }`,
-        this.configPath
+        this.configPath,
       );
     }
   }
@@ -360,7 +360,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
     if (!limit) {
       throw new ConfigurationError(
         `Unsupported model: ${this.config.tokenizer.model}`,
-        this.configPath
+        this.configPath,
       );
     }
 
@@ -380,7 +380,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
   }
 
   public validateConfig(
-    config: Partial<IDeppackConfig>
+    config: Partial<IGatherTSConfig>,
   ): IConfigValidationResult {
     this.logDebug("Validating configuration");
 
@@ -426,13 +426,13 @@ export class ConfigManager extends BaseService implements IConfigManager {
           result.isValid = false;
         } else if (config.topFilesCount > 20) {
           result.warnings.push(
-            "Large topFilesCount value may impact readability"
+            "Large topFilesCount value may impact readability",
           );
         }
       }
     } catch (error) {
       result.errors.push(
-        error instanceof Error ? error.message : String(error)
+        error instanceof Error ? error.message : String(error),
       );
       result.isValid = false;
     }
@@ -446,8 +446,8 @@ export class ConfigManager extends BaseService implements IConfigManager {
   }
 
   private validateTokenizerConfig(
-    config: Partial<IDeppackConfig>,
-    result: IConfigValidationResult
+    config: Partial<IGatherTSConfig>,
+    result: IConfigValidationResult,
   ): void {
     const validModels: TiktokenModel[] = [
       "gpt-3.5-turbo",
@@ -467,7 +467,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
 
     if (!validModels.includes(config.tokenizer.model)) {
       result.errors.push(
-        `Invalid tokenizer model. Valid models are: ${validModels.join(", ")}`
+        `Invalid tokenizer model. Valid models are: ${validModels.join(", ")}`,
       );
       result.isValid = false;
     }
@@ -479,8 +479,8 @@ export class ConfigManager extends BaseService implements IConfigManager {
   }
 
   private validateOutputFormat(
-    config: Partial<IDeppackConfig>,
-    result: IConfigValidationResult
+    config: Partial<IGatherTSConfig>,
+    result: IConfigValidationResult,
   ): void {
     if (!config.outputFormat) {
       result.errors.push("Missing output format configuration");
@@ -494,7 +494,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
       "includeUsageGuidelines",
     ] as const;
 
-    booleanFields.forEach((field) => {
+    booleanFields.forEach(field => {
       if (
         config.outputFormat![field] !== undefined &&
         typeof config.outputFormat![field] !== "boolean"
@@ -509,7 +509,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
       !["json", "text", "markdown"].includes(config.outputFormat.format)
     ) {
       result.errors.push(
-        "outputFormat.format must be one of: json, text, markdown"
+        "outputFormat.format must be one of: json, text, markdown",
       );
       result.isValid = false;
     }

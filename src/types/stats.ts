@@ -1,4 +1,4 @@
-import { IFileStats } from './files';
+import { IFileStats } from "./files";
 
 export interface ISummaryStats {
   totalFiles: number;

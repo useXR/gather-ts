@@ -1,0 +1,10 @@
+# .prettierignore
+dist/
+coverage/
+docs/
+node_modules/
+*.md
+*.json
+!package.json
+!tsconfig.json
+!typedoc.json

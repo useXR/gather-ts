@@ -12,7 +12,7 @@ export class ConfigValidator implements IConfigValidator {
   public validateConfig(config: Partial<IGatherTSConfig>): void {
     // Validate required fields
     const requiredFields = ["tokenizer", "outputFormat"] as const;
-    const missingFields = requiredFields.filter(field => !(field in config));
+    const missingFields = requiredFields.filter((field) => !(field in config));
 
     if (missingFields.length > 0) {
       throw new ValidationError("Missing required configuration fields", {
@@ -86,7 +86,7 @@ export class ConfigValidator implements IConfigValidator {
       "includeUsageGuidelines",
     ];
 
-    formatKeys.forEach(key => {
+    formatKeys.forEach((key) => {
       if (
         config.outputFormat?.[key] !== undefined &&
         typeof config.outputFormat[key] !== "boolean"
@@ -122,7 +122,7 @@ export class ConfigValidator implements IConfigValidator {
       "beforeFiles",
     ];
 
-    textKeys.forEach(key => {
+    textKeys.forEach((key) => {
       if (
         config.customText![key] !== undefined &&
         typeof config.customText![key] !== "string"
@@ -157,7 +157,9 @@ export class ConfigValidator implements IConfigValidator {
     });
   }
 
-  public validateAll(config: Partial<IGatherTSConfig>): IConfigValidationResult {
+  public validateAll(
+    config: Partial<IGatherTSConfig>,
+  ): IConfigValidationResult {
     const result: IConfigValidationResult = {
       isValid: true,
       errors: [],

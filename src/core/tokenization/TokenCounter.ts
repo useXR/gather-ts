@@ -259,9 +259,9 @@ export class TokenCounter extends BaseService implements ITokenCounter {
     }
 
     const results = await this.processBatch(files);
-    const fileStats = results.map(result => ({
+    const fileStats = results.map((result) => ({
       path: result.file,
-      chars: files.find(f => f.path === result.file)?.content.length || 0,
+      chars: files.find((f) => f.path === result.file)?.content.length || 0,
       tokens: result.tokens,
     }));
 
@@ -278,7 +278,7 @@ export class TokenCounter extends BaseService implements ITokenCounter {
       { chars: 0, tokens: 0 },
     );
 
-    const tokenValues = fileStats.map(stat => stat.tokens);
+    const tokenValues = fileStats.map((stat) => stat.tokens);
     const averageTokens = totalStats.tokens / fileStats.length;
     const maxTokens = Math.max(...tokenValues);
     const minTokens = Math.min(...tokenValues);
@@ -308,7 +308,7 @@ export class TokenCounter extends BaseService implements ITokenCounter {
     for (let i = 0; i < files.length; i += batchSize) {
       const batch = files.slice(i, i + batchSize);
       const batchResults = await Promise.all(
-        batch.map(async file => ({
+        batch.map(async (file) => ({
           file: file.path,
           tokens: await this.countTokens(file.path, file.content),
         })),

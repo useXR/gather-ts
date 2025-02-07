@@ -119,7 +119,7 @@ export function registerDefaultTemplates(
   templateManager: ITemplateManager,
 ): void {
   try {
-    defaultTemplates.forEach(template => {
+    defaultTemplates.forEach((template) => {
       if (!templateManager.hasTemplate(template.id)) {
         templateManager.registerTemplate(template);
       }

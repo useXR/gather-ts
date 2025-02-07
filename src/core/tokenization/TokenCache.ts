@@ -268,7 +268,7 @@ export class TokenCache extends BaseService implements ITokenCache {
     let oldestDate = Date.now();
     let newestDate = 0;
 
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       const timestamp = Date.parse(entry.lastUpdated);
       oldestDate = Math.min(oldestDate, timestamp);
       newestDate = Math.max(newestDate, timestamp);

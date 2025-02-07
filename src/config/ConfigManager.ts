@@ -10,7 +10,10 @@ import {
   IConfigLoadOptions,
   IConfigMetrics,
 } from "./interfaces/IConfigManager";
-import { IGatherTSConfig as IGatherTSConfig, IConfigValidationResult } from "@/types/config";
+import {
+  IGatherTSConfig as IGatherTSConfig,
+  IConfigValidationResult,
+} from "@/types/config";
 import { TiktokenModel } from "@/types/models/tokenizer";
 import { BaseService } from "@/types/services";
 
@@ -494,7 +497,7 @@ export class ConfigManager extends BaseService implements IConfigManager {
       "includeUsageGuidelines",
     ] as const;
 
-    booleanFields.forEach(field => {
+    booleanFields.forEach((field) => {
       if (
         config.outputFormat![field] !== undefined &&
         typeof config.outputFormat![field] !== "boolean"

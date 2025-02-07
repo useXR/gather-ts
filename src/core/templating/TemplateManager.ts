@@ -84,10 +84,10 @@ export class TemplateManager extends BaseService implements ITemplateManager {
       throw new ValidationError("Template must have id and content");
     }
 
-    const declaredVars = new Set(template.variables.map(v => v.name));
+    const declaredVars = new Set(template.variables.map((v) => v.name));
     const usedVars = this.extractVariables(template.content);
 
-    const undeclaredVars = [...usedVars].filter(v => !declaredVars.has(v));
+    const undeclaredVars = [...usedVars].filter((v) => !declaredVars.has(v));
     if (undeclaredVars.length > 0) {
       throw new ValidationError(
         `Template contains undeclared variables: ${undeclaredVars.join(", ")}`,
@@ -99,7 +99,7 @@ export class TemplateManager extends BaseService implements ITemplateManager {
     template: ITemplate,
     context: ITemplateContext,
   ): void {
-    const requiredVars = template.variables.filter(v => v.required);
+    const requiredVars = template.variables.filter((v) => v.required);
 
     for (const variable of requiredVars) {
       if (!(variable.name in context)) {

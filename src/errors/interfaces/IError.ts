@@ -2,7 +2,6 @@
 
 import { IErrorDetails } from "@/types/errors";
 
-
 export interface IErrorClassification {
   type: string;
   severity: "error" | "warning" | "info";

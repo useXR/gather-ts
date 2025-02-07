@@ -210,15 +210,15 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
 
     const files = filesArg
       .split(",")
-      .map(f => f.trim())
-      .filter(f => f.length > 0);
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0);
 
     if (files.length === 0) {
       throw new ValidationError("No valid entry files provided");
     }
 
     // Validate each file exists
-    files.forEach(file => {
+    files.forEach((file) => {
       this.deps.validator.validatePath(file, "Entry file");
       const absolutePath = rootDir
         ? this.deps.fileSystem.resolvePath(rootDir, file)
@@ -437,7 +437,7 @@ export class ArgumentParser extends BaseService implements IArgumentParser {
   }
 
   private validatePaths(entryFiles: string[], outputFile: string): void {
-    entryFiles.forEach(file => {
+    entryFiles.forEach((file) => {
       this.deps.validator.validatePath(file, "Entry file");
     });
 

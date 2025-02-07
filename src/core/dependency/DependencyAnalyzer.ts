@@ -244,14 +244,14 @@ export class DependencyAnalyzer
       });
 
       // Convert entry files to absolute paths if they aren't already
-      const absoluteFiles = files.map(file =>
+      const absoluteFiles = files.map((file) =>
         this.deps.fileSystem.isAbsolute(file)
           ? file
           : this.deps.fileSystem.resolvePath(projectRoot, file),
       );
 
       // Get relative paths for madge
-      const relativeFiles = absoluteFiles.map(file =>
+      const relativeFiles = absoluteFiles.map((file) =>
         this.deps.fileSystem.getRelativePath(projectRoot, file),
       );
 
@@ -290,7 +290,7 @@ export class DependencyAnalyzer
       const ignorePatterns = this.deps.ignoreHandler
         .getPatterns()
         .map(
-          pattern =>
+          (pattern) =>
             new RegExp(
               pattern
                 .replace(/\./g, "\\.")
@@ -322,7 +322,7 @@ export class DependencyAnalyzer
       // Process each entry file
       let processedFiles = 0;
       const dependencyMaps = await Promise.all(
-        relativeFiles.map(async entryFile => {
+        relativeFiles.map(async (entryFile) => {
           this.logDebug(`Processing dependencies for: ${entryFile}`);
           this.emitProgress(
             "analysis",
@@ -346,7 +346,7 @@ export class DependencyAnalyzer
       const dependencies: IDependencyMap = {};
       let totalFiles = 0;
 
-      dependencyMaps.forEach(deps => {
+      dependencyMaps.forEach((deps) => {
         Object.entries(deps).forEach(([file, fileDeps]) => {
           const absFile = this.deps.fileSystem.resolvePath(projectRoot, file);
 
@@ -355,9 +355,9 @@ export class DependencyAnalyzer
             !this.deps.ignoreHandler.shouldIgnore(absFile)
           ) {
             const validDeps = fileDeps
-              .map(dep => this.deps.fileSystem.resolvePath(projectRoot, dep))
+              .map((dep) => this.deps.fileSystem.resolvePath(projectRoot, dep))
               .filter(
-                dep =>
+                (dep) =>
                   options.includeNodeModules ||
                   !this.deps.ignoreHandler.shouldIgnore(dep),
               );
@@ -475,7 +475,7 @@ export class DependencyAnalyzer
 
     // Filter out empty files
     const nonEmptyFiles = await Promise.all(
-      result.map(async filePath => {
+      result.map(async (filePath) => {
         try {
           const content = await this.deps.fileSystem.readFile(filePath);
           return content.trim() !== "" ? filePath : null;
@@ -512,7 +512,7 @@ export class DependencyAnalyzer
           const cycle = path.slice(cycleStart);
           if (
             !cycles.some(
-              existing =>
+              (existing) =>
                 existing.length === cycle.length &&
                 existing.every((value, index) => value === cycle[index]),
             )

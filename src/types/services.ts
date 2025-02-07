@@ -5,8 +5,6 @@ import { IGatherTSConfig, IConfigValidationResult } from "./config";
 import { IFileWithContent } from "./files";
 import { ISummaryStats } from "./stats";
 
-
-
 export interface IService {
   isInitialized: boolean;
   initialize(): Promise<void>;

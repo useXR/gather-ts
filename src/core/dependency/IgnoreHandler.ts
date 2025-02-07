@@ -152,8 +152,8 @@ export class IgnoreHandler
       });
       const patterns = content
         .split("\n")
-        .map(line => line.trim())
-        .filter(line => line && !line.startsWith("#"));
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#"));
 
       this.logDebug(`Loaded ${patterns.length} patterns from ${filePath}`);
       return patterns;
@@ -207,7 +207,7 @@ export class IgnoreHandler
     const validPatterns: string[] = [];
     const errors: string[] = [];
 
-    patterns.forEach(pattern => {
+    patterns.forEach((pattern) => {
       const result = this.parsePattern(pattern);
       if (result.isValid && result.normalizedPattern) {
         validPatterns.push(result.normalizedPattern);
@@ -413,7 +413,7 @@ export class IgnoreHandler
       this.deps.logger.debug(`Project Root: ${this.projectRoot}`);
       this.deps.logger.debug("\nTesting patterns:");
 
-      const matchResults = this.patterns.map(pattern => {
+      const matchResults = this.patterns.map((pattern) => {
         try {
           const isMatch = micromatch.isMatch(relativePath, pattern, {
             dot: true,

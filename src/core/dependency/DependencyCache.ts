@@ -58,12 +58,12 @@ export class DependencyCache implements IDependencyCache {
         this.logDebug("DependencyCache already initialized");
         return;
       }
-      
+
       if (options.force) {
         this.cache.clear();
         this.logDebug("Forced cache clear during initialization");
       }
-      
+
       if (options.timeout) {
         this.cacheDuration = options.timeout;
         this.logDebug(`Cache timeout set to ${options.timeout}ms`);
@@ -150,22 +150,22 @@ export class DependencyCache implements IDependencyCache {
       throw new CacheError("Cache not initialized", "write");
     }
     this.logDebug(`Setting cache entry for key: ${key}`);
-  
+
     try {
       const entry: IDependencyCacheEntry = {
         dependencies,
         timestamp: Date.now(),
         hash: this.computeHash(dependencies),
-        timeout: options.timeout || this.cacheDuration
+        timeout: options.timeout || this.cacheDuration,
       };
-  
+
       if (options.force) {
         this.logDebug(`Force writing cache entry for ${key}`);
         this.cache.set(key, entry);
       } else if (!this.cache.has(key)) {
         this.cache.set(key, entry);
       }
-  
+
       this.updateStats();
       this.logDebug(`Cache entry set for key: ${key}`);
     } catch (error) {
@@ -234,7 +234,7 @@ export class DependencyCache implements IDependencyCache {
     let oldestTimestamp = Date.now();
     let totalAge = 0;
 
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       const age = Date.now() - entry.timestamp;
       oldestTimestamp = Math.min(oldestTimestamp, entry.timestamp);
       totalAge += age;

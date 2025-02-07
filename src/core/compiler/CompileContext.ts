@@ -253,7 +253,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
             options.maxDepth,
           );
 
-          return files.map(file => ({
+          return files.map((file) => ({
             absolute: file,
             relative: this.deps.fileSystem.getRelativePath(rootDir, file),
             path: this.deps.fileSystem.getRelativePath(rootDir, file),
@@ -358,7 +358,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
           requiredFile,
         );
 
-        if (!processedFiles.some(f => f.absolute === absolutePath)) {
+        if (!processedFiles.some((f) => f.absolute === absolutePath)) {
           if (this.deps.fileSystem.exists(absolutePath)) {
             processedFiles.push({
               absolute: absolutePath,
@@ -383,17 +383,17 @@ export class CompileContext extends EventEmitter implements ICompileContext {
 
   private async loadFileContents(
     files: IFileInfo[],
-    options: ICompileFileOptions = {}
+    options: ICompileFileOptions = {},
   ): Promise<IFileWithContent[]> {
     this.logDebug(`Loading contents for ${files.length} files`);
-  
+
     const result = await Promise.all(
-      files.map(async file => {
+      files.map(async (file) => {
         try {
           const content = await this.deps.fileSystem.readFile(file.absolute, {
-            encoding: options.encoding || 'utf8' // Use encoding option
+            encoding: options.encoding || "utf8", // Use encoding option
           });
-  
+
           // Validate content if requested
           if (options.validateContent && (!content || content.trim() === "")) {
             this.deps.logger.warn(`Empty file content for: ${file.path}`);
@@ -402,12 +402,12 @@ export class CompileContext extends EventEmitter implements ICompileContext {
               content: " ",
             };
           }
-  
+
           // Check file size limit
           if (options.maxSize && Buffer.byteLength(content) > options.maxSize) {
             throw new ValidationError(`File exceeds size limit: ${file.path}`);
           }
-  
+
           return {
             ...file,
             content,
@@ -421,10 +421,10 @@ export class CompileContext extends EventEmitter implements ICompileContext {
         }
       }),
     );
-  
+
     // Use stats for caching and metrics
     this.stats.processedFiles += result.length;
-    
+
     this.logDebug(`Loaded contents for ${result.length} files`);
     return result;
   }
@@ -469,7 +469,7 @@ export class CompileContext extends EventEmitter implements ICompileContext {
       );
 
       // Add repository structure
-      const fileList = filesWithContent.map(file => file.path).join("\n");
+      const fileList = filesWithContent.map((file) => file.path).join("\n");
 
       output.push(
         this.deps.templateManager.render("repositoryStructure", {

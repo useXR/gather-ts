@@ -199,7 +199,7 @@ export class Validator
 
     if (options.arrayType) {
       const invalidItems = value.filter(
-        item => typeof item !== options.arrayType,
+        (item) => typeof item !== options.arrayType,
       );
       if (invalidItems.length > 0) {
         result.errors.push(
@@ -218,7 +218,7 @@ export class Validator
   ): void {
     if (options.requiredFields) {
       const missingFields = options.requiredFields.filter(
-        field => !(field in value),
+        (field) => !(field in value),
       );
       if (missingFields.length > 0) {
         result.errors.push(
@@ -346,7 +346,7 @@ export class Validator
   ): T {
     const result = this.validate(value, fieldName, {
       type: "string",
-      customValidator: val => enumValues.includes(val as T),
+      customValidator: (val) => enumValues.includes(val as T),
     });
     if (!result.isValid) {
       this.handleValidationError(
